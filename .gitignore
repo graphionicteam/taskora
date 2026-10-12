@@ -1,7 +1,12 @@
 # Dependencies
 /node_modules
 /.pnp
-.pnp.js
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
 # Testing and Coverage
 /coverage
@@ -40,7 +45,6 @@ next-env.d.ts
 
 # Operating System & IDE Files
 .DS_Store
-*.pem
 Thumbs.db
 Desktop.ini
 .idea/
