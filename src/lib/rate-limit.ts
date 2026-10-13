@@ -6,24 +6,31 @@ interface RateLimitResult {
   resetAt: Date;
 }
 
-// In-memory fallback if database is offline or not yet connected
-const memoryFallback = new Map<string, { count: number; expiresAt: number }>();
+// In-memory fallback ONLY for local development when DATABASE_URL is not configured
+const devMemoryFallback = new Map<string, { count: number; expiresAt: number }>();
 
 /**
  * Shared serverless-compatible rate limiter.
- * Persists attempts to Neon PostgreSQL (rate_limits table) across Vercel function instances.
+ * Persists attempts to Neon PostgreSQL (rate_limits table) atomically across Vercel function instances.
+ * Production must not fall back to process-memory-only rate limiting.
  */
 export async function checkRateLimit(
   key: string,
   limit: number = 5,
   windowSeconds: number = 60
 ): Promise<RateLimitResult> {
-  const now = new Date();
-  const resetAt = new Date(now.getTime() + windowSeconds * 1000);
+  const isProduction = process.env.NODE_ENV === "production";
+  const resetAt = new Date(Date.now() + windowSeconds * 1000);
 
-  // If no DATABASE_URL is set, use local fallback
+  // If no DATABASE_URL is set:
   if (!process.env.DATABASE_URL) {
-    const record = memoryFallback.get(key);
+    if (isProduction) {
+      // In production, missing database configuration fails closed safely
+      console.error("CRITICAL: Rate limiter invoked in production without DATABASE_URL.");
+      return { success: false, remaining: 0, resetAt };
+    }
+    // Development-only local memory fallback
+    const record = devMemoryFallback.get(key);
     if (record && record.expiresAt > Date.now()) {
       if (record.count >= limit) {
         return { success: false, remaining: 0, resetAt: new Date(record.expiresAt) };
@@ -31,50 +38,59 @@ export async function checkRateLimit(
       record.count += 1;
       return { success: true, remaining: limit - record.count, resetAt: new Date(record.expiresAt) };
     }
-    memoryFallback.set(key, { count: 1, expiresAt: resetAt.getTime() });
+    devMemoryFallback.set(key, { count: 1, expiresAt: resetAt.getTime() });
     return { success: true, remaining: limit - 1, resetAt };
   }
 
   try {
-    const existing = await db.rateLimit.findUnique({ where: { key } });
+    // Atomic PostgreSQL upsert and increment
+    const rows = await db.$queryRaw<Array<{ count: number; expires_at: Date }>>`
+      INSERT INTO rate_limits (key, count, expires_at)
+      VALUES (${key}, 1, ${resetAt})
+      ON CONFLICT (key) DO UPDATE
+      SET 
+        count = CASE 
+          WHEN rate_limits.expires_at > NOW() THEN rate_limits.count + 1 
+          ELSE 1 
+        END,
+        expires_at = CASE 
+          WHEN rate_limits.expires_at > NOW() THEN rate_limits.expires_at 
+          ELSE ${resetAt} 
+        END
+      RETURNING count, expires_at;
+    `;
 
-    if (existing && existing.expiresAt > now) {
-      if (existing.count >= limit) {
-        return {
-          success: false,
-          remaining: 0,
-          resetAt: existing.expiresAt,
-        };
-      }
+    const row = rows[0];
+    const currentCount = row ? row.count : limit;
+    const expiresAt = row ? new Date(row.expires_at) : resetAt;
 
-      const updated = await db.rateLimit.update({
-        where: { key },
-        data: { count: { increment: 1 } },
-      });
-
+    if (currentCount > limit) {
       return {
-        success: true,
-        remaining: Math.max(0, limit - updated.count),
-        resetAt: existing.expiresAt,
+        success: false,
+        remaining: 0,
+        resetAt: expiresAt,
       };
     }
 
-    // Insert or reset expired record
-    const record = await db.rateLimit.upsert({
-      where: { key },
-      create: { key, count: 1, expiresAt: resetAt },
-      update: { count: 1, expiresAt: resetAt },
-    });
-
     return {
       success: true,
-      remaining: limit - 1,
-      resetAt: record.expiresAt,
+      remaining: Math.max(0, limit - currentCount),
+      resetAt: expiresAt,
     };
   } catch (error) {
-    console.warn("Rate limit database check failed, falling back to memory:", error);
-    // Graceful fallback to memory on transient DB error
-    const record = memoryFallback.get(key);
+    console.error("Rate limit database check error:", error);
+
+    if (isProduction) {
+      // In production, do not silently fallback to process memory. Fail closed safely.
+      return {
+        success: false,
+        remaining: 0,
+        resetAt,
+      };
+    }
+
+    // Development fallback on transient database error
+    const record = devMemoryFallback.get(key);
     if (record && record.expiresAt > Date.now()) {
       if (record.count >= limit) {
         return { success: false, remaining: 0, resetAt: new Date(record.expiresAt) };
@@ -82,7 +98,7 @@ export async function checkRateLimit(
       record.count += 1;
       return { success: true, remaining: limit - record.count, resetAt: new Date(record.expiresAt) };
     }
-    memoryFallback.set(key, { count: 1, expiresAt: resetAt.getTime() });
+    devMemoryFallback.set(key, { count: 1, expiresAt: resetAt.getTime() });
     return { success: true, remaining: limit - 1, resetAt };
   }
 }
