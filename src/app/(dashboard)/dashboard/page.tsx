@@ -11,9 +11,9 @@ export default function DashboardPage() {
     <PlaceholderView
       title="Overview"
       section="Workspace"
-      description="Personal action-first dashboard and priority queue."
-      phaseNote="Action-first KPIs (My Active, Due Today, Overdue, Completed This Week) and priority lists are scheduled for Phase 10 implementation."
-      badgeVariant="inProgress"
+      description="Personal action-first productivity overview and priority queue."
+      emptyTitle="Welcome to your Overview"
+      emptyDescription="Your active priorities, tasks, and workspace updates will appear here as collaboration begins."
     />
   );
 }

@@ -86,20 +86,20 @@ export function WorkspaceSwitcher({
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="h-9 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center gap-2 text-xs font-semibold transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#4F46E5] max-w-[200px]"
+        className="h-9 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 flex items-center gap-2 text-xs font-semibold shadow-2xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#4F46E5] max-w-[200px]"
         aria-label="Switch active workspace"
         aria-expanded={isOpen}
       >
-        <div className="w-5 h-5 rounded-md bg-[#4F46E5]/10 border border-[#4F46E5]/20 flex items-center justify-center text-[#4F46E5] shrink-0 font-bold text-2xs">
+        <div className="w-5 h-5 rounded-md bg-indigo-50 border border-indigo-200 dark:bg-indigo-950/70 dark:border-indigo-800 flex items-center justify-center text-[#4F46E5] dark:text-indigo-300 shrink-0 font-bold text-2xs">
           {displayName.slice(0, 1).toUpperCase()}
         </div>
         <span className="truncate">{displayName}</span>
-        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-auto" />
+        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0 ml-auto" />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-1.5 w-64 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xl z-50 p-1.5 animate-in fade-in-0 zoom-in-95 duration-100">
-          <div className="px-2.5 py-1.5 text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+        <div className="absolute left-0 mt-1.5 w-64 rounded-xl bg-surface dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xl z-50 p-1.5 animate-in fade-in-0 zoom-in-95 duration-100">
+          <div className="px-2.5 py-1.5 text-2xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             Workspaces
           </div>
 

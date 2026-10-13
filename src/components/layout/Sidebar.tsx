@@ -119,7 +119,7 @@ export const Sidebar: React.FC = () => {
         {NAV_GROUPS.map((group) => (
           <div key={group.group} className="space-y-1">
             {!collapsed && (
-              <h2 className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 dark:text-slate-500 select-none uppercase">
+              <h2 className="px-3 text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 select-none uppercase">
                 {group.group}
               </h2>
             )}
@@ -141,19 +141,19 @@ export const Sidebar: React.FC = () => {
                       collapsed ? "justify-center px-0 py-2" : "px-3 py-2",
                       isActive
                         ? item.isHimi
-                          ? "bg-purple-50 text-[#6D28D9] dark:bg-purple-950/40 dark:text-[#A78BFA]"
-                          : "bg-indigo-50 text-[#4F46E5] dark:bg-indigo-950/40 dark:text-indigo-300"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200"
+                          ? "bg-purple-50/90 text-[#6D28D9] font-semibold dark:bg-purple-950/60 dark:text-[#A78BFA]"
+                          : "bg-indigo-50/90 text-[#4F46E5] font-semibold dark:bg-indigo-950/60 dark:text-indigo-300"
+                        : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
                     )}
                   >
                     <Icon
                       className={cn(
-                        "w-5 h-5 shrink-0",
+                        "w-5 h-5 shrink-0 transition-colors",
                         isActive
                           ? item.isHimi
                             ? "text-[#8B5CF6]"
                             : "text-[#4F46E5] dark:text-indigo-400"
-                          : "text-slate-400 dark:text-slate-500"
+                          : "text-slate-500 dark:text-slate-400"
                       )}
                     />
                     {!collapsed && <span>{item.title}</span>}
@@ -174,7 +174,7 @@ export const Sidebar: React.FC = () => {
         ))}
       </div>
 
-      <div className="p-3 border-t border-slate-100 dark:border-slate-800/80 space-y-0.5">
+      <div className="p-3 border-t border-slate-200/80 dark:border-slate-800 space-y-0.5">
         {FOOTER_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -188,11 +188,18 @@ export const Sidebar: React.FC = () => {
                 "flex items-center gap-3 rounded-lg text-sm font-medium transition-colors min-h-[40px] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#4F46E5]",
                 collapsed ? "justify-center px-0 py-2" : "px-3 py-2",
                 isActive
-                  ? "bg-indigo-50 text-[#4F46E5] dark:bg-indigo-950/40 dark:text-indigo-300"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200"
+                  ? "bg-indigo-50/90 text-[#4F46E5] font-semibold dark:bg-indigo-950/60 dark:text-indigo-300"
+                  : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
               )}
             >
-              <Icon className="w-5 h-5 shrink-0 text-slate-400 dark:text-slate-500" />
+              <Icon
+                className={cn(
+                  "w-5 h-5 shrink-0 transition-colors",
+                  isActive
+                    ? "text-[#4F46E5] dark:text-indigo-400"
+                    : "text-slate-500 dark:text-slate-400"
+                )}
+              />
               {!collapsed && <span>{item.title}</span>}
             </Link>
           );
