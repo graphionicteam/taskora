@@ -23,7 +23,7 @@ const TABS: TabItem[] = [
   { title: "Tasks", href: "/tasks/my", icon: CheckSquare },
   { title: "Projects", href: "/projects", icon: FolderKanban },
   { title: "Inbox", href: "/inbox", icon: Inbox },
-  { title: "More", href: "/settings", icon: Menu },
+  { title: "More", href: "/more", icon: Menu },
 ];
 
 export const MobileTabBar: React.FC = () => {
