@@ -75,3 +75,10 @@ export const DialogTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = (
 }) => {
   return <h2 className={cn("text-base font-bold text-slate-900 dark:text-white", className)} {...props} />;
 };
+
+export const DialogFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
+  className,
+  ...props
+}) => {
+  return <div className={cn("flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800", className)} {...props} />;
+};

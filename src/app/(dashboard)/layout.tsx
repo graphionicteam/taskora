@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import { ShellContainer } from "@/components/layout/ShellContainer";
 import { getActiveWorkspaceContext, getUserWorkspaces } from "@/lib/workspace";
+import { db } from "@/lib/db";
 
 export default async function DashboardLayout({
   children,
@@ -22,6 +23,33 @@ export default async function DashboardLayout({
   // Resolve active workspace context and all workspaces for this user
   const wsContext = await getActiveWorkspaceContext(session.user.id);
   const userWorkspaces = await getUserWorkspaces(session.user.id);
+
+  // Fetch active members for active workspace
+  const workspaceMembers = wsContext?.workspace
+    ? await db.workspaceMember.findMany({
+        where: {
+          workspaceId: wsContext.workspace.id,
+          status: "ACTIVE",
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatarUrl: true,
+            },
+          },
+          designation: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { joinedAt: "asc" },
+      })
+    : [];
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -43,6 +71,7 @@ export default async function DashboardLayout({
               : null
           }
           workspaces={userWorkspaces}
+          members={workspaceMembers}
         />
 
         {/* Scrollable Page Body */}

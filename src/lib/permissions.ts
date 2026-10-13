@@ -91,3 +91,31 @@ export function canRemoveMember(
 
   return true;
 }
+
+/**
+ * Task permission checks according to Stage 08 specifications.
+ */
+export function canCreateTask(role: WorkspaceRole): boolean {
+  return role === "OWNER" || role === "ADMIN" || role === "MEMBER";
+}
+
+export function canCloseTask(role: WorkspaceRole): boolean {
+  return role === "OWNER" || role === "ADMIN" || role === "MEMBER";
+}
+
+export function canArchiveTask(role: WorkspaceRole): boolean {
+  return role === "OWNER" || role === "ADMIN";
+}
+
+export function canEditTask(
+  role: WorkspaceRole,
+  isCreator: boolean,
+  isAssignee: boolean
+): boolean {
+  if (role === "OWNER" || role === "ADMIN" || role === "MEMBER") {
+    return true;
+  }
+  // Guests can only edit tasks assigned to them
+  return isAssignee;
+}
+

@@ -23,6 +23,8 @@ model User {
 
   memberships     WorkspaceMember[]
   invitationsSent WorkspaceInvitation[]
+  createdTasks    Task[]                @relation("TaskCreator")
+  closedTasks     Task[]                @relation("TaskClosedBy")
 
   @@map("users")
 }
@@ -66,6 +68,7 @@ model Workspace {
   members      WorkspaceMember[]
   invitations  WorkspaceInvitation[]
   designations Designation[]
+  tasks        Task[]
 
   @@map("workspaces")
 }
@@ -100,6 +103,7 @@ model WorkspaceMember {
   workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   designation   Designation?   @relation(fields: [designationId], references: [id], onDelete: SetNull)
+  assignedTasks Task[]         @relation("TaskAssignee")
 
   @@unique([workspaceId, userId])
   @@index([workspaceId, status])
@@ -129,3 +133,65 @@ model WorkspaceInvitation {
   @@index([email])
   @@map("workspace_invitations")
 }
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CLOSED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id          String        @id @default(cuid())
+  workspaceId String        @map("workspace_id")
+  title       String
+  description String?
+  status      TaskStatus    @default(TODO)
+  priority    TaskPriority  @default(MEDIUM)
+  dueDate     DateTime?     @map("due_date")
+
+  // Primary assignee (must be an active workspace member)
+  assigneeId  String?       @map("assignee_id")
+
+  // Creator
+  creatorId   String        @map("creator_id")
+
+  // Self-referencing parent-child hierarchy
+  parentId    String?       @map("parent_id")
+
+  // Closure audit
+  closedAt    DateTime?     @map("closed_at")
+  closedById  String?       @map("closed_by_id")
+
+  // Archiving
+  isArchived  Boolean       @default(false) @map("is_archived")
+  archivedAt  DateTime?     @map("archived_at")
+
+  // Reserved for Phase 05 projects
+  projectId   String?       @map("project_id")
+
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignee    WorkspaceMember? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  creator     User             @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  parent      Task?            @relation("TaskHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Task[]           @relation("TaskHierarchy")
+  closedBy    User?            @relation("TaskClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, isArchived, status])
+  @@index([workspaceId, assigneeId])
+  @@index([workspaceId, parentId])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
