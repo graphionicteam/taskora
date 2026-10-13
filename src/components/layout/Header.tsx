@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Search, Bell, Plus } from "lucide-react";
 import { TaskoraLogo } from "./TaskoraLogo";
 import { Button } from "@/components/ui/Button";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
+import { WorkspaceRole } from "@prisma/client";
 
 interface HeaderProps {
   user?: {
@@ -12,9 +14,26 @@ interface HeaderProps {
     email?: string | null;
     image?: string | null;
   } | null;
+  activeWorkspace?: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
+  workspaces?: Array<{
+    workspace: {
+      id: string;
+      name: string;
+      slug: string;
+    };
+    role: WorkspaceRole;
+  }>;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user }) => {
+export const Header: React.FC<HeaderProps> = ({
+  user,
+  activeWorkspace,
+  workspaces = [],
+}) => {
   const getInitials = (name?: string | null, email?: string | null): string => {
     if (name) {
       const parts = name.trim().split(/\s+/);
@@ -35,13 +54,23 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
 
   return (
     <header className="h-16 shrink-0 border-b border-slate-200/80 dark:border-slate-800 bg-surface/95 backdrop-blur-xs sticky top-0 z-20 px-4 md:px-6 flex items-center justify-between">
-      {/* Mobile Brand & Global Search */}
-      <div className="flex items-center gap-3 md:gap-4 flex-1 max-w-md">
+      {/* Brand & Workspace Switcher & Global Search */}
+      <div className="flex items-center gap-3 md:gap-4 flex-1 max-w-lg">
         <div className="md:hidden">
           <Link href="/dashboard" aria-label="Taskora home">
             <TaskoraLogo collapsed={true} />
           </Link>
         </div>
+
+        {/* Workspace Switcher */}
+        {activeWorkspace && (
+          <div className="shrink-0">
+            <WorkspaceSwitcher
+              activeWorkspace={activeWorkspace}
+              workspaces={workspaces}
+            />
+          </div>
+        )}
 
         {/* Global Search Bar (Stage 06 Placeholder) */}
         <div className="relative w-full">
