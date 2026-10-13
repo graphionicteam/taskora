@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -63,26 +63,29 @@ const FOOTER_ITEMS: NavItem[] = [
   { title: "Profile", href: "/profile", icon: User },
 ];
 
+function subscribeToDesktop(callback: () => void) {
+  const media = window.matchMedia("(min-width: 1024px)");
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
+}
+
+function getDesktopSnapshot() {
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
+function getDesktopServerSnapshot() {
+  return false;
+}
+
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
-  const [isDesktop, setIsDesktop] = useState(false);
+  const isDesktop = useSyncExternalStore(
+    subscribeToDesktop,
+    getDesktopSnapshot,
+    getDesktopServerSnapshot
+  );
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [tabletDrawerOpen, setTabletDrawerOpen] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1024px)");
-    setIsDesktop(media.matches);
-
-    const handler = (e: MediaQueryListEvent) => {
-      setIsDesktop(e.matches);
-      if (e.matches) {
-        setTabletDrawerOpen(false);
-      }
-    };
-
-    media.addEventListener("change", handler);
-    return () => media.removeEventListener("change", handler);
-  }, []);
 
   // Close drawer on escape key
   useEffect(() => {
@@ -94,6 +97,8 @@ export const Sidebar: React.FC = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [tabletDrawerOpen]);
+
+  const isDrawerVisible = !isDesktop && tabletDrawerOpen;
 
   // Determine whether the in-flow sidebar is collapsed
   // On desktop (>=1024px): depends on desktopCollapsed state
@@ -253,7 +258,7 @@ export const Sidebar: React.FC = () => {
       </aside>
 
       {/* Adaptive Drawer for Tablet (768px–1023px) */}
-      {tabletDrawerOpen && (
+      {isDrawerVisible && (
         <div className="fixed inset-0 z-50 lg:hidden" aria-modal="true" role="dialog">
           {/* Backdrop */}
           <div

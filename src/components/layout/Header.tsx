@@ -6,7 +6,33 @@ import { Search, Bell, Plus } from "lucide-react";
 import { TaskoraLogo } from "./TaskoraLogo";
 import { Button } from "@/components/ui/Button";
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  } | null;
+}
+
+export const Header: React.FC<HeaderProps> = ({ user }) => {
+  const getInitials = (name?: string | null, email?: string | null): string => {
+    if (name) {
+      const parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      }
+      return name.slice(0, 2).toUpperCase();
+    }
+    if (email) {
+      return email.slice(0, 2).toUpperCase();
+    }
+    return "TA";
+  };
+
+  const initials = getInitials(user?.name, user?.email);
+  const displayName = user?.name || user?.email || "Workspace Member";
+  const displaySub = user?.email || "Member";
+
   return (
     <header className="h-16 shrink-0 border-b border-slate-200/80 dark:border-slate-800 bg-surface/95 backdrop-blur-xs sticky top-0 z-20 px-4 md:px-6 flex items-center justify-between">
       {/* Mobile Brand & Global Search */}
@@ -73,11 +99,11 @@ export const Header: React.FC = () => {
           aria-label="User profile"
         >
           <div className="w-8 h-8 rounded-full bg-[#4F46E5]/10 border border-[#4F46E5]/20 flex items-center justify-center text-xs font-semibold text-[#4F46E5]">
-            TA
+            {initials}
           </div>
-          <div className="hidden lg:block text-left text-xs leading-tight">
-            <p className="font-semibold text-slate-800 dark:text-slate-200">Workspace Member</p>
-            <p className="text-slate-400 dark:text-slate-500">Designation</p>
+          <div className="hidden lg:block text-left text-xs leading-tight max-w-[140px] truncate">
+            <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">{displayName}</p>
+            <p className="text-slate-400 dark:text-slate-500 truncate">{displaySub}</p>
           </div>
         </Link>
       </div>
