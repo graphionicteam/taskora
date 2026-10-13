@@ -1,22 +1,5 @@
 import { z } from "zod";
 
-export const initialOwnerSchema = z.object({
-  setupSecret: z.string().min(1, "Setup authorization secret is required."),
-  name: z.string().trim().min(2, "Full name must be at least 2 characters."),
-  email: z.string().trim().email("Please enter a valid work email address."),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters.")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter.")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter.")
-    .regex(/[0-9]/, "Password must contain at least one number."),
-  workspaceName: z
-    .string()
-    .trim()
-    .min(2, "Workspace name must be at least 2 characters.")
-    .max(50, "Workspace name must be under 50 characters."),
-});
-
 export const createWorkspaceSchema = z.object({
   name: z
     .string()

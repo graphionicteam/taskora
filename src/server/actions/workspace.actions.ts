@@ -1,6 +1,5 @@
 "use server";
 
-import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -21,7 +20,6 @@ import {
   getValidInvitation,
 } from "@/lib/invitations";
 import {
-  initialOwnerSchema,
   createWorkspaceSchema,
   updateWorkspaceSchema,
   createInvitationSchema,
@@ -45,139 +43,6 @@ const DEFAULT_DESIGNATIONS = [
   "Operations Specialist",
 ];
 
-/**
- * First-run initial owner onboarding.
- * Strictly gated by INITIAL_SETUP_SECRET and user count === 0 under atomic transaction.
- */
-export async function initialOwnerSetupAction(
-  prevState: ActionResult | null,
-  formData: FormData
-): Promise<ActionResult> {
-  const parsed = initialOwnerSchema.safeParse({
-    setupSecret: formData.get("setupSecret"),
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-    workspaceName: formData.get("workspaceName"),
-  });
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message || "Invalid input data." };
-  }
-
-  const { setupSecret, name, email, password, workspaceName } = parsed.data;
-
-  // 1. Verify server-side setup secret in constant time
-  const expectedSecret = process.env.INITIAL_SETUP_SECRET;
-  if (!expectedSecret || expectedSecret.length < 32) {
-    return {
-      error:
-        "Initial setup secret is not configured on the server. Please check INITIAL_SETUP_SECRET.",
-    };
-  }
-
-  const secretBuffer = Buffer.from(setupSecret.trim());
-  const expectedBuffer = Buffer.from(expectedSecret.trim());
-
-  if (
-    secretBuffer.length !== expectedBuffer.length ||
-    !crypto.timingSafeEqual(secretBuffer, expectedBuffer)
-  ) {
-    return { error: "Invalid setup authorization secret key." };
-  }
-
-  let createdWorkspaceId = "";
-
-  try {
-    // 2. Atomic creation under isolated transaction
-    await db.$transaction(async (tx) => {
-      // Concurrency check: Ensure no user has been created yet
-      const existingCount = await tx.user.count();
-      if (existingCount > 0) {
-        throw new Error(
-          "Initialization locked: a user account already exists in this deployment."
-        );
-      }
-
-      // Hash password using bcrypt (work factor 12)
-      const passwordHash = await bcrypt.hash(password, 12);
-
-      // Create root Owner User
-      const user = await tx.user.create({
-        data: {
-          name,
-          email: email.toLowerCase(),
-          passwordHash,
-        },
-      });
-
-      // Create primary Workspace
-      const slug = generateSlug(workspaceName);
-      const workspace = await tx.workspace.create({
-        data: {
-          name: workspaceName,
-          slug,
-        },
-      });
-      createdWorkspaceId = workspace.id;
-
-      // Seed default Designations
-      await tx.designation.createMany({
-        data: DEFAULT_DESIGNATIONS.map((title) => ({
-          workspaceId: workspace.id,
-          name: title,
-        })),
-      });
-
-      // Find initial designation (e.g. Product Manager or null)
-      const initialDesignation = await tx.designation.findFirst({
-        where: { workspaceId: workspace.id, name: "Product Manager" },
-      });
-
-      // Create OWNER membership
-      await tx.workspaceMember.create({
-        data: {
-          workspaceId: workspace.id,
-          userId: user.id,
-          role: "OWNER",
-          status: "ACTIVE",
-          designationId: initialDesignation?.id || null,
-        },
-      });
-    });
-
-    // 3. Set active workspace cookie
-    const cookieStore = await cookies();
-    cookieStore.set(ACTIVE_WORKSPACE_COOKIE, createdWorkspaceId, {
-      path: "/",
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 30 * 24 * 60 * 60,
-    });
-
-    // 4. Authenticate session
-    await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error("Initial owner setup failed:", error);
-    return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "An unexpected error occurred during setup.",
-    };
-  }
-}
-
-/**
- * Switches the active workspace selector for the current authenticated user.
- */
 export async function switchWorkspaceAction(
   workspaceId: string
 ): Promise<ActionResult> {
