@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   Filter,
@@ -62,6 +63,27 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     taskId: string;
     status: TaskStatus;
   } | null>(null);
+
+  const searchParams = useSearchParams();
+  const selectedTaskIdParam = searchParams.get("selected") || searchParams.get("taskId");
+
+  // Auto-open task if URL has ?selected=... or ?taskId=... (e.g. from notification click)
+  useEffect(() => {
+    if (!selectedTaskIdParam) return;
+    const found = tasks.find((t) => t.id === selectedTaskIdParam);
+    if (found) {
+      setSelectedTask(found);
+    } else {
+      fetch(`/api/v1/workspaces/${workspace.id}/tasks/${selectedTaskIdParam}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.data) {
+            setSelectedTask(data.data);
+          }
+        })
+        .catch((err) => console.error("Error opening selected task from URL:", err));
+    }
+  }, [selectedTaskIdParam, tasks, workspace.id]);
 
   // Reload tasks from API
   const refreshTasks = useCallback(async () => {
@@ -247,6 +269,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             depth={depth}
             isExpanded={isExpanded}
             isSelected={selectedTask?.id === node.id}
+            currentMemberId={currentMemberId}
             onToggleExpand={handleToggleExpand}
             onSelectTask={setSelectedTask}
             onQuickStatusChange={handleQuickStatusChange}

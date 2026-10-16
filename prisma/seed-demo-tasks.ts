@@ -187,6 +187,10 @@ async function main() {
   // 2. Insert Demo Notifications for members
   console.log("Inserting demo notifications...");
 
+  const firstTask = await prisma.task.findFirst({
+    where: { workspaceId: workspace.id, title: demoTasks[0].title },
+  });
+
   const allMembers = [rudra, vedant, lay, bhumi, mayank];
 
   for (const m of allMembers) {
@@ -199,7 +203,7 @@ async function main() {
         type: "TASK_ASSIGNED",
         title: "New Task Assigned",
         content: `Mayank Parmar assigned you: "${demoTasks[0].title}" with High priority.`,
-        link: "/dashboard",
+        link: firstTask ? `/tasks?selected=${firstTask.id}` : "/tasks",
         isRead: false,
         createdAt: new Date(Date.now() - 1000 * 60 * 15), // 15 mins ago
       },

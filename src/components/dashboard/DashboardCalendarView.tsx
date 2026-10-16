@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useTransition, useMemo } from "react";
+import React, { useState, useTransition, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -21,7 +22,19 @@ import {
   Building,
   Check,
   ChevronDown,
+  StickyNote,
 } from "lucide-react";
+import { StickyNotesWidget } from "./StickyNotesWidget";
+import { TaskStatus, TaskPriority } from "@prisma/client";
+import { TaskItemData } from "@/components/tasks/TaskRow";
+import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
+import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
+import { TaskDetailDrawer } from "@/components/tasks/TaskDetailDrawer";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { updateTaskStatusAction, createTaskAction } from "@/server/actions/task.actions";
+import { cn } from "@/lib/utils";
 
 const InstagramIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
@@ -35,16 +48,6 @@ const TwitterIcon = ({ className }: { className?: string }) => (
 const YoutubeIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><polygon points="10 15 15 12 10 9 10 15"/></svg>
 );
-import { TaskStatus, TaskPriority } from "@prisma/client";
-import { TaskItemData } from "@/components/tasks/TaskRow";
-import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
-import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
-import { TaskDetailDrawer } from "@/components/tasks/TaskDetailDrawer";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { updateTaskStatusAction, createTaskAction } from "@/server/actions/task.actions";
-import { cn } from "@/lib/utils";
 
 interface WorkspaceMemberOption {
   id: string;
@@ -73,7 +76,7 @@ interface DashboardCalendarViewProps {
 }
 
 type ViewMode = "month" | "week" | "day";
-type TaskFilterType = "all" | "my" | "social" | "projects" | "clients";
+type TaskFilterType = "all" | "group" | "my" | "social" | "projects" | "clients";
 
 export function DashboardCalendarView({
   initialTasks,
@@ -89,6 +92,25 @@ export function DashboardCalendarView({
   const [filterType, setFilterType] = useState<TaskFilterType>("all");
   const [selectedMemberId, setSelectedMemberId] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
+
+  const searchParams = useSearchParams();
+  const selectedTaskIdParam = searchParams.get("selected") || searchParams.get("taskId");
+
+  // Auto-open task if URL has ?selected=... or ?taskId=... (e.g. from notification click)
+  useEffect(() => {
+    if (!selectedTaskIdParam) return;
+    const found = tasks.find((t) => t.id === selectedTaskIdParam);
+    if (found) {
+      setSelectedTask(found);
+    } else {
+      fetch(`/api/v1/workspaces/${workspace.id}/tasks/${selectedTaskIdParam}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.data) setSelectedTask(data.data);
+        })
+        .catch((err) => console.error(err));
+    }
+  }, [selectedTaskIdParam, tasks, workspace.id]);
 
   // Modal / Creator states
   const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
@@ -146,6 +168,16 @@ export function DashboardCalendarView({
       }
 
       // Filter type
+      if (filterType === "group") {
+        const isTeamBroadcast =
+          !task.assigneeId ||
+          task.title.toLowerCase().includes("team") ||
+          task.title.toLowerCase().includes("broadcast") ||
+          task.title.toLowerCase().includes("all") ||
+          task.description?.toLowerCase().includes("team") ||
+          task.description?.toLowerCase().includes("broadcast");
+        if (!isTeamBroadcast) return false;
+      }
       if (filterType === "my" && task.assigneeId !== currentMemberId) {
         return false;
       }
@@ -605,6 +637,12 @@ export function DashboardCalendarView({
         </Card>
       </div>
 
+      {/* Personal Sticky Notes & Tomorrow Tasks Scratchpad */}
+      <StickyNotesWidget
+        currentMemberId={currentMemberId}
+        currentUserName={currentUserName}
+      />
+
       {/* Filter and Grouping Bar */}
       <Card className="p-3.5 flex flex-wrap items-center justify-between gap-3 bg-surface">
         {/* Left: Quick View Filters */}
@@ -615,7 +653,7 @@ export function DashboardCalendarView({
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
               filterType === "all"
-                ? "bg-[#4F46E5] text-white"
+                ? "bg-[#4F46E5] text-white shadow-2xs"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
             )}
           >
@@ -623,15 +661,29 @@ export function DashboardCalendarView({
           </button>
           <button
             type="button"
-            onClick={() => setFilterType("my")}
+            onClick={() => setFilterType("group")}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
-              filterType === "my"
-                ? "bg-[#4F46E5] text-white"
+              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
+              filterType === "group"
+                ? "bg-[#4F46E5] text-white shadow-2xs"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
             )}
           >
-            My Tasks
+            <Users className="w-3.5 h-3.5" />
+            Full Group Tasks
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterType("my")}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
+              filterType === "my"
+                ? "bg-[#4F46E5] text-white shadow-2xs"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+            )}
+          >
+            <User className="w-3.5 h-3.5" />
+            My Direct Tasks
           </button>
           <button
             type="button"
@@ -818,6 +870,10 @@ export function DashboardCalendarView({
                       {item.tasks.slice(0, 3).map((task) => {
                         const isDone = task.status === "DONE" || task.status === "CLOSED";
                         const social = getSocialPlatform(task);
+                        const isAssignedByOwnerToMe =
+                          (task.creator?.name?.toLowerCase().includes("mayank") ||
+                            task.creator?.email?.toLowerCase().includes("mayank")) &&
+                          task.assigneeId === currentMemberId;
 
                         return (
                           <div
@@ -825,7 +881,9 @@ export function DashboardCalendarView({
                             onClick={() => setSelectedTask(task)}
                             className={cn(
                               "p-1.5 rounded-lg border text-xs cursor-pointer transition-all hover:scale-[1.01] flex items-center justify-between gap-1 shadow-2xs",
-                              social
+                              isAssignedByOwnerToMe
+                                ? "border-amber-400 bg-amber-50/95 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 ring-1 ring-amber-400/90 font-semibold"
+                                : social
                                 ? "bg-pink-50/80 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800 text-pink-900 dark:text-pink-200"
                                 : isDone
                                 ? "bg-slate-100/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-400 line-through"
@@ -848,16 +906,24 @@ export function DashboardCalendarView({
                                 {isDone && <Check className="w-2.5 h-2.5" />}
                               </button>
 
-                              <span className="truncate font-medium text-[11px] leading-tight">
-                                {task.title}
+                              <span className="truncate font-medium text-[11px] leading-tight flex items-center gap-1">
+                                {isAssignedByOwnerToMe && (
+                                  <span className="text-amber-600 dark:text-amber-400 font-bold shrink-0">⭐</span>
+                                )}
+                                <span>{task.title}</span>
                               </span>
                             </div>
 
                             {/* Assignee Avatar with Assignment Traceability */}
                             {task.assignee?.user && (
                               <div
-                                className="w-4 h-4 rounded-full bg-indigo-100 dark:bg-indigo-950 text-[#4F46E5] text-[9px] font-bold flex items-center justify-center shrink-0"
-                                title={`Assigned by ${task.creator?.name || "Mayank Parmar (Owner)"} → Assigned to ${task.assignee.user.name || task.assignee.user.email}`}
+                                className={cn(
+                                  "w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center shrink-0",
+                                  isAssignedByOwnerToMe
+                                    ? "bg-amber-400 text-amber-950 shadow-2xs"
+                                    : "bg-indigo-100 dark:bg-indigo-950 text-[#4F46E5]"
+                                )}
+                                title={`Assigned by ${task.creator?.name || "Mayank Parmar (Owner)"} → Assigned to ${task.assignee.user.name || task.assignee.user.email}${isAssignedByOwnerToMe ? " (You)" : ""}`}
                               >
                                 {(task.assignee.user.name || task.assignee.user.email).slice(0, 1).toUpperCase()}
                               </div>
@@ -915,25 +981,48 @@ export function DashboardCalendarView({
 
                 {/* Day tasks in week column */}
                 <div className="space-y-1.5 flex-1 overflow-y-auto">
-                  {col.tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      onClick={() => setSelectedTask(task)}
-                      className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 hover:border-[#4F46E5] cursor-pointer text-xs space-y-1"
-                    >
-                      <div className="font-semibold text-slate-900 dark:text-white truncate">
-                        {task.title}
-                      </div>
-                      <div className="flex items-center justify-between text-[10px]">
-                        <TaskPriorityBadge priority={task.priority} />
-                        {task.assignee?.user && (
-                          <span className="text-slate-500 font-medium">
-                            {task.assignee.user.name?.split(" ")[0]}
-                          </span>
+                  {col.tasks.map((task) => {
+                    const isAssignedByOwnerToMe =
+                      (task.creator?.name?.toLowerCase().includes("mayank") ||
+                        task.creator?.email?.toLowerCase().includes("mayank")) &&
+                      task.assigneeId === currentMemberId;
+
+                    return (
+                      <div
+                        key={task.id}
+                        onClick={() => setSelectedTask(task)}
+                        className={cn(
+                          "p-2 rounded-lg border cursor-pointer text-xs space-y-1 transition-all",
+                          isAssignedByOwnerToMe
+                            ? "border-amber-400 bg-amber-50/95 dark:bg-amber-950/60 ring-1 ring-amber-400 text-amber-950 dark:text-amber-100 font-semibold shadow-2xs"
+                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 hover:border-[#4F46E5]"
                         )}
+                      >
+                        <div className="font-semibold text-slate-900 dark:text-white truncate flex items-center gap-1">
+                          {isAssignedByOwnerToMe && (
+                            <span className="text-amber-600 dark:text-amber-400 font-bold shrink-0">⭐</span>
+                          )}
+                          <span>{task.title}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <TaskPriorityBadge priority={task.priority} />
+                          {task.assignee?.user && (
+                            <span
+                              className={cn(
+                                "font-medium",
+                                isAssignedByOwnerToMe
+                                  ? "text-amber-800 dark:text-amber-300 font-bold"
+                                  : "text-slate-500"
+                              )}
+                            >
+                              {task.assignee.user.name?.split(" ")[0]}
+                              {isAssignedByOwnerToMe ? " (You)" : ""}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -961,42 +1050,62 @@ export function DashboardCalendarView({
               ) : (
                 filteredTasks
                   .filter((t) => t.dueDate && isSameDay(new Date(t.dueDate), currentDate))
-                  .map((task) => (
-                    <div
-                      key={task.id}
-                      onClick={() => setSelectedTask(task)}
-                      className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 hover:border-[#4F46E5] flex items-center justify-between cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={(e) => handleToggleStatus(task.id, e)}
-                          className="w-5 h-5 rounded-md border flex items-center justify-center"
-                        >
-                          {(task.status === "DONE" || task.status === "CLOSED") && <Check className="w-3.5 h-3.5 text-emerald-500" />}
-                        </button>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{task.title}</p>
-                          {task.description && <p className="text-xs text-slate-500">{task.description}</p>}
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
-                            <span className="text-slate-400">Assigned by</span>
-                            <span className="font-semibold text-slate-700 dark:text-slate-300">
-                              {task.creator?.name || "Mayank Parmar (Owner)"}
-                            </span>
-                            <span className="text-[#4F46E5] font-bold">&rarr;</span>
-                            <span className="text-slate-400">To</span>
-                            <span className="font-bold text-[#4F46E5] dark:text-indigo-400">
-                              {task.assignee?.user ? (task.assignee.user.name || task.assignee.user.email) : "Unassigned"}
-                            </span>
+                  .map((task) => {
+                    const isAssignedByOwnerToMe =
+                      (task.creator?.name?.toLowerCase().includes("mayank") ||
+                        task.creator?.email?.toLowerCase().includes("mayank")) &&
+                      task.assigneeId === currentMemberId;
+
+                    return (
+                      <div
+                        key={task.id}
+                        onClick={() => setSelectedTask(task)}
+                        className={cn(
+                          "p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all",
+                          isAssignedByOwnerToMe
+                            ? "border-amber-300 dark:border-amber-600 bg-gradient-to-r from-amber-50/90 via-indigo-50/40 to-surface dark:from-amber-950/30 dark:via-indigo-950/20 dark:to-surface ring-1 ring-amber-300 shadow-xs"
+                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 hover:border-[#4F46E5]"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={(e) => handleToggleStatus(task.id, e)}
+                            className="w-5 h-5 rounded-md border flex items-center justify-center shrink-0"
+                          >
+                            {(task.status === "DONE" || task.status === "CLOSED") && <Check className="w-3.5 h-3.5 text-emerald-500" />}
+                          </button>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-slate-900 dark:text-white">{task.title}</p>
+                              {isAssignedByOwnerToMe && (
+                                <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-700 shrink-0 flex items-center gap-1 shadow-2xs">
+                                  ⭐ Assigned to You by Mayank Parmar
+                                </span>
+                              )}
+                            </div>
+                            {task.description && <p className="text-xs text-slate-500">{task.description}</p>}
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
+                              <span className="text-slate-400">Assigned by</span>
+                              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                {task.creator?.name || "Mayank Parmar (Owner)"}
+                              </span>
+                              <span className="text-[#4F46E5] font-bold">&rarr;</span>
+                              <span className="text-slate-400">To</span>
+                              <span className="font-bold text-[#4F46E5] dark:text-indigo-400">
+                                {task.assignee?.user ? (task.assignee.user.name || task.assignee.user.email) : "Unassigned"}
+                                {isAssignedByOwnerToMe ? " (You)" : ""}
+                              </span>
+                            </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <TaskPriorityBadge priority={task.priority} />
+                          <TaskStatusBadge status={task.status} />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <TaskPriorityBadge priority={task.priority} />
-                        <TaskStatusBadge status={task.status} />
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
               )}
             </div>
           </div>

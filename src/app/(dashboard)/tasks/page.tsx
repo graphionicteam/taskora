@@ -76,17 +76,30 @@ export default async function AllTasksPage() {
       },
       children: {
         where: { isArchived: false },
-        select: {
-          id: true,
-          status: true,
-          children: {
-            where: { isArchived: false },
+        include: {
+          assignee: {
             select: {
               id: true,
-              status: true,
+              role: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  avatarUrl: true,
+                },
+              },
+            },
+          },
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
           },
         },
+        orderBy: { createdAt: "asc" },
       },
     },
     orderBy: [
@@ -97,15 +110,13 @@ export default async function AllTasksPage() {
     ],
   });
 
-  // Attach leaf progress
+  // Attach leaf progress and retain subtask children
   const initialTasks: TaskItemData[] = tasks.map((task) => {
     const leafProgress = calculateLeafProgress(task);
-    const { children: _, ...rest } = task;
-    void _;
     return {
-      ...rest,
+      ...task,
       leafProgress,
-      children: [],
+      children: (task.children as unknown as TaskItemData[]) || [],
     };
   });
 

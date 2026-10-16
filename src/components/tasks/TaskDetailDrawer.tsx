@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useEffect, useTransition } from "react";
 import {
   X,
   AlertCircle,
@@ -10,6 +10,11 @@ import {
   UserCheck,
   ArrowRight,
   ShieldCheck,
+  CheckCircle2,
+  Circle,
+  Trash2,
+  CheckCheck,
+  Loader2,
 } from "lucide-react";
 import { TaskStatus, TaskPriority } from "@prisma/client";
 import { TaskItemData } from "./TaskRow";
@@ -60,6 +65,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
     task?.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : ""
   );
   const [assigneeId, setAssigneeId] = useState<string>(task?.assigneeId || "");
+  const [subtasks, setSubtasks] = useState<TaskItemData[]>(task?.children || []);
+  const [isLoadingSubtasks, setIsLoadingSubtasks] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -77,9 +84,25 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : ""
     );
     setAssigneeId(task.assigneeId || "");
+    setSubtasks(task.children || []);
     setErrorMessage(null);
     setSuccessMessage(null);
   }
+
+  // Fetch full live subtasks whenever active task changes
+  useEffect(() => {
+    if (!task?.id || !workspaceId) return;
+    setIsLoadingSubtasks(true);
+    fetch(`/api/v1/workspaces/${workspaceId}/tasks/${task.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.data?.children) {
+          setSubtasks(data.data.children);
+        }
+      })
+      .catch((err) => console.error("Error loading subtasks:", err))
+      .finally(() => setIsLoadingSubtasks(false));
+  }, [task?.id, workspaceId]);
 
   if (!task) return null;
 
@@ -110,8 +133,25 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
   const handleAddSubtask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSubtaskTitle.trim()) return;
+    const cleanTitle = newSubtaskTitle.trim();
+    if (!cleanTitle) return;
 
+    const tempId = `temp-${Date.now()}`;
+    const optimisticSubtask: TaskItemData = {
+      id: tempId,
+      title: cleanTitle,
+      status: "TODO",
+      priority: "MEDIUM",
+      parentId: task.id,
+      assigneeId: task.assigneeId,
+      assignee: task.assignee,
+      creator: task.creator,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Instant optimistic render
+    setSubtasks((prev) => [...prev, optimisticSubtask]);
+    setNewSubtaskTitle("");
     setIsAddingSubtask(true);
     setErrorMessage(null);
 
@@ -120,24 +160,129 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: newSubtaskTitle.trim(),
+          title: cleanTitle,
           parentId: task.id,
+          assigneeId: task.assigneeId || undefined,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
         setErrorMessage(data.error || "Failed to add subtask.");
-      } else {
-        setNewSubtaskTitle("");
-        // Reload parent task details
-        await onUpdateTask(task.id, {});
+        setSubtasks((prev) => prev.filter((s) => s.id !== tempId));
+      } else if (data.data) {
+        setSubtasks((prev) =>
+          prev.map((s) => (s.id === tempId ? data.data : s))
+        );
+        onUpdateTask(task.id, {});
       }
     } catch {
       setErrorMessage("Network error while adding subtask.");
+      setSubtasks((prev) => prev.filter((s) => s.id !== tempId));
     } finally {
       setIsAddingSubtask(false);
     }
+  };
+
+  const handleToggleSubtask = async (subtaskId: string, currentStatus: TaskStatus) => {
+    const newStatus: TaskStatus =
+      currentStatus === "DONE" || currentStatus === "CLOSED" ? "TODO" : "DONE";
+
+    // Instant optimistic status flip
+    setSubtasks((prev) =>
+      prev.map((s) => (s.id === subtaskId ? { ...s, status: newStatus } : s))
+    );
+
+    try {
+      const res = await fetch(
+        `/api/v1/workspaces/${workspaceId}/tasks/${subtaskId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+      if (!res.ok) {
+        // Rollback
+        setSubtasks((prev) =>
+          prev.map((s) =>
+            s.id === subtaskId ? { ...s, status: currentStatus } : s
+          )
+        );
+      } else {
+        onUpdateTask(task.id, {});
+      }
+    } catch (err) {
+      console.error(err);
+      setSubtasks((prev) =>
+        prev.map((s) =>
+          s.id === subtaskId ? { ...s, status: currentStatus } : s
+        )
+      );
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this subtask?")) return;
+
+    setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
+    try {
+      await fetch(`/api/v1/workspaces/${workspaceId}/tasks/${subtaskId}`, {
+        method: "DELETE",
+      });
+      onUpdateTask(task.id, {});
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCompleteAllSubtasks = async () => {
+    const activeSubs = subtasks.filter(
+      (s) => s.status !== "DONE" && s.status !== "CLOSED"
+    );
+    if (activeSubs.length === 0) return;
+
+    setSubtasks((prev) =>
+      prev.map((s) => ({ ...s, status: "DONE" as TaskStatus }))
+    );
+
+    try {
+      await Promise.all(
+        activeSubs.map((s) =>
+          fetch(`/api/v1/workspaces/${workspaceId}/tasks/${s.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "DONE" }),
+          })
+        )
+      );
+      setSuccessMessage("All subtasks marked Done");
+      setTimeout(() => setSuccessMessage(null), 1500);
+      onUpdateTask(task.id, {});
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleStatusChange = async (newStatus: TaskStatus) => {
+    setStatus(newStatus);
+    if ((newStatus === "DONE" || newStatus === "CLOSED") && subtasks.length > 0) {
+      const activeSubs = subtasks.filter(
+        (s) => s.status !== "DONE" && s.status !== "CLOSED"
+      );
+      if (activeSubs.length > 0) {
+        const confirmAll = window.confirm(
+          `This task has ${activeSubs.length} active subtask(s). Would you like to mark all subtasks as Done so this parent task can be completed?`
+        );
+        if (confirmAll) {
+          await handleCompleteAllSubtasks();
+        } else {
+          return;
+        }
+      }
+    }
+    handleSaveField({ status: newStatus });
   };
 
   const handleArchive = async () => {
@@ -273,9 +418,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             <select
               value={status}
               onChange={(e) => {
-                const newStatus = e.target.value as TaskStatus;
-                setStatus(newStatus);
-                handleSaveField({ status: newStatus });
+                handleStatusChange(e.target.value as TaskStatus);
               }}
               disabled={isPending}
               className="w-full h-9 px-2.5 text-xs font-semibold rounded-lg bg-surface border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5] cursor-pointer"
@@ -376,50 +519,107 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         {/* Subtask Hierarchy & Leaf Progress Section */}
         <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Subtasks
-            </h3>
-            {task.leafProgress && (task.children?.length ?? 0) > 0 && (
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                {task.leafProgress.completedLeaves}/{task.leafProgress.totalLeaves} leaves completed ({task.leafProgress.percentage}%)
-              </span>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Subtasks ({subtasks.length})
+              </h3>
+              {isLoadingSubtasks && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
+            </div>
+            {subtasks.length > 0 && (
+              <div className="flex items-center gap-2">
+                {subtasks.some((s) => s.status !== "DONE" && s.status !== "CLOSED") && (
+                  <button
+                    type="button"
+                    onClick={handleCompleteAllSubtasks}
+                    className="text-[11px] font-semibold text-[#4F46E5] dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <CheckCheck className="w-3.5 h-3.5" />
+                    Complete all
+                  </button>
+                )}
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  {subtasks.filter((s) => s.status === "DONE" || s.status === "CLOSED").length}/{subtasks.length} done
+                </span>
+              </div>
             )}
           </div>
 
           {/* Leaf progress bar */}
-          {task.leafProgress && (task.children?.length ?? 0) > 0 && (
+          {subtasks.length > 0 && (
             <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-4">
               <div
                 className="h-full bg-[#4F46E5] rounded-full transition-all duration-300"
-                style={{ width: `${task.leafProgress.percentage}%` }}
+                style={{
+                  width: `${Math.round(
+                    (subtasks.filter((s) => s.status === "DONE" || s.status === "CLOSED").length /
+                      subtasks.length) *
+                      100
+                  )}%`,
+                }}
               />
             </div>
           )}
 
           {/* Subtask list */}
-          <div className="space-y-1 mb-3">
-            {task.children && task.children.length > 0 ? (
-              task.children.map((subtask) => (
-                <div
-                  key={subtask.id}
-                  onClick={() => onSelectTask(subtask)}
-                  className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-slate-100 dark:border-slate-800 cursor-pointer transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0 mr-2">
-                    <CornerDownRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span
-                      className={cn(
-                        "text-xs font-medium truncate",
-                        (subtask.status === "DONE" || subtask.status === "CLOSED") &&
-                          "line-through text-slate-400 dark:text-slate-500"
-                      )}
-                    >
-                      {subtask.title}
-                    </span>
+          <div className="space-y-1.5 mb-3">
+            {subtasks.length > 0 ? (
+              subtasks.map((subtask) => {
+                const isSubDone = subtask.status === "DONE" || subtask.status === "CLOSED";
+                return (
+                  <div
+                    key={subtask.id}
+                    className={cn(
+                      "group flex items-center justify-between p-2.5 rounded-lg border transition-all",
+                      isSubDone
+                        ? "bg-slate-50/60 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800/60"
+                        : "bg-surface hover:bg-slate-50 dark:hover:bg-slate-800/60 border-slate-200 dark:border-slate-800 shadow-2xs"
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleSubtask(subtask.id, subtask.status);
+                        }}
+                        className="text-slate-400 hover:text-emerald-500 transition-colors shrink-0 cursor-pointer"
+                        title={isSubDone ? "Mark as To Do" : "Mark as Done"}
+                        aria-label={isSubDone ? "Mark subtask as To Do" : "Mark subtask as Done"}
+                      >
+                        {isSubDone ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        ) : (
+                          <Circle className="w-4 h-4" />
+                        )}
+                      </button>
+
+                      <span
+                        onClick={() => onSelectTask(subtask)}
+                        className={cn(
+                          "text-xs font-medium truncate cursor-pointer hover:text-[#4F46E5] transition-colors flex-1",
+                          isSubDone && "line-through text-slate-400 dark:text-slate-500"
+                        )}
+                        title={subtask.title}
+                      >
+                        {subtask.title}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <TaskStatusBadge status={subtask.status} />
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteSubtask(subtask.id, e)}
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all cursor-pointer"
+                        title="Delete subtask"
+                        aria-label="Delete subtask"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <TaskStatusBadge status={subtask.status} />
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-xs text-slate-400 dark:text-slate-500 py-1">
                 No subtasks yet. Add one below to break down this work.

@@ -57,6 +57,7 @@ interface TaskRowProps {
   depth?: number;
   isExpanded?: boolean;
   isSelected?: boolean;
+  currentMemberId?: string;
   onToggleExpand?: (taskId: string) => void;
   onSelectTask: (task: TaskItemData) => void;
   onQuickStatusChange: (taskId: string, targetStatus: TaskStatus) => void;
@@ -68,6 +69,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   depth = 0,
   isExpanded = true,
   isSelected = false,
+  currentMemberId,
   onToggleExpand,
   onSelectTask,
   onQuickStatusChange,
@@ -75,6 +77,16 @@ export const TaskRow: React.FC<TaskRowProps> = ({
 }) => {
   const hasChildren = (task.children?.length ?? 0) > 0;
   const isCompleted = task.status === "DONE" || task.status === "CLOSED";
+
+  // Check if task is assigned by Owner (Mayank Parmar) directly to the viewing member
+  const isAssignedByOwnerToMe = React.useMemo(() => {
+    if (!currentMemberId) return false;
+    const isOwnerCreator =
+      task.creator?.name?.toLowerCase().includes("mayank") ||
+      task.creator?.email?.toLowerCase().includes("mayank");
+    const isMe = task.assigneeId === currentMemberId;
+    return Boolean(isOwnerCreator && isMe);
+  }, [task.creator, task.assigneeId, currentMemberId]);
 
   // Check if task is overdue (dueDate < now && !isCompleted)
   const isOverdue = React.useMemo(() => {
@@ -114,10 +126,12 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   return (
     <div
       className={cn(
-        "group flex items-center justify-between min-h-[52px] py-2 px-3 sm:px-4 border-b border-slate-100 dark:border-slate-800/80 transition-colors cursor-pointer select-none",
-        isSelected
+        "group flex items-center justify-between min-h-[52px] py-2 px-3 sm:px-4 border-b transition-colors cursor-pointer select-none",
+        isAssignedByOwnerToMe
+          ? "border-amber-300 dark:border-amber-600/80 bg-gradient-to-r from-amber-50/90 via-indigo-50/40 to-surface dark:from-amber-950/30 dark:via-indigo-950/20 dark:to-surface ring-1 ring-amber-300/60 dark:ring-amber-500/40 shadow-xs"
+          : isSelected
           ? "bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-900"
-          : "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 bg-surface"
+          : "border-slate-100 dark:border-slate-800/80 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 bg-surface"
       )}
       onClick={() => onSelectTask(task)}
     >
@@ -188,6 +202,13 @@ export const TaskRow: React.FC<TaskRowProps> = ({
         >
           {task.title}
         </span>
+
+        {/* Personalized Owner Assignment Highlight (Only for this assignee) */}
+        {isAssignedByOwnerToMe && (
+          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-700/80 shrink-0 shadow-2xs animate-pulse">
+            <span>⭐ Assigned to You by Mayank Parmar</span>
+          </span>
+        )}
 
         {/* Subtask leaf progress badge if parent */}
         {hasChildren && task.leafProgress && (

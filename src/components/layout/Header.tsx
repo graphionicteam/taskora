@@ -134,9 +134,12 @@ export const Header: React.FC<HeaderProps> = ({
     } catch (err) {
       console.error(err);
     }
-    if (link) {
+    const notifItem = notifications.find((n) => n.id === id);
+    const destination = link || (notifItem?.type === "TASK_ASSIGNED" ? "/tasks" : null);
+
+    if (destination) {
       setIsNotificationsOpen(false);
-      router.push(link);
+      router.push(destination);
     }
   };
 

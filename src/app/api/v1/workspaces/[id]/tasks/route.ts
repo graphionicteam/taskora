@@ -111,17 +111,30 @@ export async function GET(request: Request, { params }: RouteParams) {
       },
       children: {
         where: { isArchived: false },
-        select: {
-          id: true,
-          status: true,
-          children: {
-            where: { isArchived: false },
+        include: {
+          assignee: {
             select: {
               id: true,
-              status: true,
+              role: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  avatarUrl: true,
+                },
+              },
+            },
+          },
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
           },
         },
+        orderBy: { createdAt: "asc" },
       },
     },
     orderBy: [
@@ -132,15 +145,13 @@ export async function GET(request: Request, { params }: RouteParams) {
     ],
   });
 
-  // Attach leaf progress calculation to each task
+  // Attach leaf progress calculation to each task and preserve children subtasks
   const enrichedTasks = tasks.map((task) => {
     const leafProgress = calculateLeafProgress(task);
-    const { children: _, ...rest } = task;
-    void _;
     return {
-      ...rest,
+      ...task,
       leafProgress,
-      children: [],
+      children: task.children || [],
     };
   });
 
