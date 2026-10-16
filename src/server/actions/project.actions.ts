@@ -93,9 +93,6 @@ export async function getProjectsWithFinancials(workspaceId: string): Promise<{
   let companyVault = 0;
   let taxReserves = 0;
   let totalExpenses = 0;
-  let totalTeamPayouts = 0;
-  let disbursedPayouts = 0;
-  let pendingPayouts = 0;
 
   const enrichedProjects: ProjectWithFinancials[] = projects.map((p) => {
     const budget = p.totalBudget || 0;

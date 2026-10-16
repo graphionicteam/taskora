@@ -179,6 +179,12 @@ export const InboxView: React.FC<InboxViewProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
   // Load messages when selected conversation changes & auto-poll
   useEffect(() => {
     if (!selectedConversationId) return;
@@ -220,12 +226,6 @@ export const InboxView: React.FC<InboxViewProps> = ({
       clearInterval(pollInterval);
     };
   }, [selectedConversationId]);
-
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
-  };
 
   const activeConversation = conversations.find((c) => c.id === selectedConversationId);
 

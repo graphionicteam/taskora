@@ -141,7 +141,7 @@ export async function updateTaskStatusAction(
 
   // 1. Completion constraint check
   if (targetStatus === "DONE" || targetStatus === "CLOSED") {
-    if (targetStatus === "CLOSED" && !canCloseTask(wsContext.role)) {
+    if (targetStatus === "CLOSED" && !canCloseTask(wsContext.role, isCreator, isAssignee)) {
       return { error: "Permission denied to close tasks." };
     }
 

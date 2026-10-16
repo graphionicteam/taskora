@@ -129,11 +129,6 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
   // Find current user's today attendance
   const myRecord = records.find((r) => r.member.id === currentUserMemberId && r.date === todayDate);
 
-  // Automatically request GPS position when on Punch tab without blocking UI
-  useEffect(() => {
-    refreshLocation(false);
-  }, [office.latitude, office.longitude]);
-
   const refreshLocation = (highAccuracy: boolean = false) => {
     setLocating(true);
     setGeoError(null);
@@ -164,6 +159,12 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
       setLocating(false);
     }
   };
+
+  // Automatically request GPS position when on Punch tab without blocking UI
+  useEffect(() => {
+    refreshLocation(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [office.latitude, office.longitude]);
 
   // Helper to use current location as office coordinate during setup/testing
   const handleUseCurrentLocationForOffice = () => {

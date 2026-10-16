@@ -99,8 +99,13 @@ export function canCreateTask(role: WorkspaceRole): boolean {
   return role === "OWNER" || role === "ADMIN" || role === "MEMBER";
 }
 
-export function canCloseTask(role: WorkspaceRole): boolean {
-  return role === "OWNER" || role === "ADMIN" || role === "MEMBER";
+export function canCloseTask(
+  role: WorkspaceRole,
+  isCreator: boolean = false,
+  isAssignee: boolean = false
+): boolean {
+  if (role === "OWNER" || role === "ADMIN") return true;
+  return isAssignee || isCreator;
 }
 
 export function canArchiveTask(role: WorkspaceRole): boolean {
@@ -112,10 +117,10 @@ export function canEditTask(
   isCreator: boolean,
   isAssignee: boolean
 ): boolean {
-  if (role === "OWNER" || role === "ADMIN" || role === "MEMBER") {
+  if (role === "OWNER" || role === "ADMIN") {
     return true;
   }
-  // Guests can only edit tasks assigned to them
-  return isAssignee;
+  // For team members / employees: only the direct assignee or creator can edit or change details
+  return isAssignee || isCreator;
 }
 
