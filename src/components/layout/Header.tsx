@@ -51,14 +51,14 @@ export const Header: React.FC<HeaderProps> = ({
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
   const getInitials = (name?: string | null, email?: string | null): string => {
     if (name) {
-      const parts = name.trim().split(/\s+/);
-      if (parts.length >= 2) {
+      const parts = name.trim().split(/\s+/).filter(Boolean);
+      if (parts.length >= 2 && parts[0]?.[0] && parts[parts.length - 1]?.[0]) {
         return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
       }
-      return name.slice(0, 2).toUpperCase();
+      return name.slice(0, 2).toUpperCase() || "TA";
     }
     if (email) {
-      return email.slice(0, 2).toUpperCase();
+      return email.slice(0, 2).toUpperCase() || "TA";
     }
     return "TA";
   };

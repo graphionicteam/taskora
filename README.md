@@ -8,7 +8,7 @@ Taskora is a minimal, premium, collaborative task, project, and team management 
 
 - **Web Dashboard**: Current stable Next.js with React, TypeScript, and App Router.
 - **Styling**: Tailwind CSS configured with approved Taskora design tokens (WCAG 2.2 AA).
-- **Database**: Cloud Neon PostgreSQL with connection pooling and serverless autoscaling.
+- **Database**: High-performance Supabase PostgreSQL with connection pooling.
 - **ORM & Migrations**: Prisma ORM with dual-connection configuration (`DATABASE_URL` pooled, `DIRECT_URL` direct).
 - **API First**: Headless, versioned REST API (`/api/v1`) serving both the Next.js web application and the future Flutter mobile companion.
 - **Cloud Deployment**: Vercel-compatible serverless cloud deployment over HTTPS.

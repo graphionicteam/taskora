@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getActiveWorkspaceContext } from "@/lib/workspace";
+import { getActiveWorkspaceContext, getWorkspaceActiveMembers } from "@/lib/workspace";
 import { TaskManager } from "@/components/tasks/TaskManager";
 import { TaskItemData } from "@/components/tasks/TaskRow";
 import { calculateLeafProgress } from "@/lib/tasks";
@@ -110,30 +110,8 @@ export default async function MyTasksPage() {
     };
   });
 
-  // Fetch active workspace members
-  const members = await db.workspaceMember.findMany({
-    where: {
-      workspaceId: wsContext.workspace.id,
-      status: "ACTIVE",
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatarUrl: true,
-        },
-      },
-      designation: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-    orderBy: { joinedAt: "asc" },
-  });
+  // Fetch active workspace members from memory cache
+  const members = await getWorkspaceActiveMembers(wsContext.workspace.id);
 
   return (
     <TaskManager

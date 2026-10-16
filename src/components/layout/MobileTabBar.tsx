@@ -45,6 +45,7 @@ export const MobileTabBar: React.FC = () => {
             <Link
               key={tab.title}
               href={tab.href}
+              prefetch={true}
               className={cn(
                 "flex flex-col items-center justify-center flex-1 h-full min-h-[44px] min-w-[44px] transition-colors relative focus-visible:outline-hidden",
                 isActive

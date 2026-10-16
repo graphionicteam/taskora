@@ -5,8 +5,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import { ShellContainer } from "@/components/layout/ShellContainer";
-import { getActiveWorkspaceContext, getUserWorkspaces } from "@/lib/workspace";
-import { db } from "@/lib/db";
+import { getActiveWorkspaceContext, getUserWorkspaces, getWorkspaceActiveMembers } from "@/lib/workspace";
 
 export default async function DashboardLayout({
   children,
@@ -20,35 +19,15 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // Resolve active workspace context and all workspaces for this user
-  const wsContext = await getActiveWorkspaceContext(session.user.id);
-  const userWorkspaces = await getUserWorkspaces(session.user.id);
+  // Resolve active workspace context and all workspaces for this user in parallel
+  const [wsContext, userWorkspaces] = await Promise.all([
+    getActiveWorkspaceContext(session.user.id),
+    getUserWorkspaces(session.user.id),
+  ]);
 
-  // Fetch active members for active workspace
+  // Fetch active members for active workspace using memoized cache
   const workspaceMembers = wsContext?.workspace
-    ? await db.workspaceMember.findMany({
-        where: {
-          workspaceId: wsContext.workspace.id,
-          status: "ACTIVE",
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              avatarUrl: true,
-            },
-          },
-          designation: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-        orderBy: { joinedAt: "asc" },
-      })
+    ? await getWorkspaceActiveMembers(wsContext.workspace.id)
     : [];
 
   return (

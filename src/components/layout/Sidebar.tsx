@@ -8,6 +8,7 @@ import {
   CheckSquare,
   ListTodo,
   FolderKanban,
+  QrCode,
   Inbox,
   Users,
   Sparkles,
@@ -38,10 +39,11 @@ const NAV_GROUPS: NavGroup[] = [
   {
     group: "WORKSPACE",
     items: [
-      { title: "Overview", href: "/dashboard", icon: LayoutDashboard },
+      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { title: "Attendance", href: "/attendance", icon: QrCode },
       { title: "My Tasks", href: "/tasks/my", icon: CheckSquare },
       { title: "All Tasks", href: "/tasks", icon: ListTodo },
-      { title: "Projects", href: "/projects", icon: FolderKanban },
+      { title: "Projects & Budgets", href: "/projects", icon: FolderKanban },
     ],
   },
   {
@@ -134,6 +136,7 @@ export const Sidebar: React.FC = () => {
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={true}
                     onClick={onItemClick}
                     title={collapsed ? item.title : undefined}
                     className={cn(
@@ -182,6 +185,7 @@ export const Sidebar: React.FC = () => {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               onClick={onItemClick}
               title={collapsed ? item.title : undefined}
               className={cn(

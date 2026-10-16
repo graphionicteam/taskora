@@ -4,27 +4,36 @@ import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  pool: Pool | undefined;
 };
 
 function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
-    // In Phase 01 / build environments without live credentials, return baseline client
     return new PrismaClient();
   }
 
-  // Neon pooled runtime connection using PostgreSQL adapter
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaPg(pool);
+  // Reuse existing pool across fast reloads
+  const pool =
+    globalForPrisma.pool ??
+    new Pool({
+      connectionString,
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
+    });
 
+  globalForPrisma.pool = pool;
+
+  const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }
 
 export const db = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = db;
-}
+globalForPrisma.prisma = db;
 
 export default db;

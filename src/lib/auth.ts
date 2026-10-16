@@ -4,7 +4,10 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { loginSchema } from "@/lib/validations/auth";
 
+const userEmailIdCache = new Map<string, string>();
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   providers: [
     Credentials({
       name: "Credentials",
@@ -70,6 +73,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        if (user.email && user.id) userEmailIdCache.set(user.email, user.id);
+      } else if (!token.id && token.email) {
+        let cachedId = userEmailIdCache.get(token.email);
+        if (!cachedId) {
+          try {
+            const dbUser = await db.user.findUnique({
+              where: { email: token.email },
+              select: { id: true },
+            });
+            if (dbUser) {
+              cachedId = dbUser.id;
+              userEmailIdCache.set(token.email, dbUser.id);
+            }
+          } catch (err) {
+            console.warn("Database sync warning in JWT callback:", err);
+          }
+        }
+        if (cachedId) {
+          token.id = cachedId;
+        }
       }
       return token;
     },

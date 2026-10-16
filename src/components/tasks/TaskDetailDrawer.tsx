@@ -406,7 +406,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500 space-y-1">
           <p>
             Created on{" "}
-            {new Date(task.createdAt).toLocaleDateString(undefined, {
+            {new Date(task.createdAt).toLocaleDateString("en-US", {
               year: "numeric",
               month: "short",
               day: "numeric",
@@ -415,7 +415,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
           </p>
           {task.status === "CLOSED" && (
             <p className="text-indigo-600 dark:text-indigo-400 font-medium">
-              Closed {task.dueDate ? `on ${new Date().toLocaleDateString()}` : ""}
+              Closed {task.dueDate ? `on ${new Date().toLocaleDateString("en-US")}` : ""}
             </p>
           )}
         </div>

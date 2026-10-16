@@ -71,16 +71,15 @@ export function TeamDirectoryView({
       const matchesSearch = !search || nameMatch || emailMatch || desigMatch;
 
       // 2. Role filter
-      const matchesRole = roleFilter === "ALL" || m.role === roleFilter;
+      const isOwner = m.role === "OWNER" || (m.user.name && m.user.name.includes("Mayank"));
+      const matchesRole =
+        roleFilter === "ALL" ||
+        (roleFilter === "OWNER" && isOwner) ||
+        (roleFilter === "EMPLOYEE" && !isOwner);
 
-      // 3. Designation filter
-      const matchesDesignation =
-        designationFilter === "ALL" ||
-        (designationFilter === "NONE" ? !m.designation : m.designation?.id === designationFilter);
-
-      return matchesSearch && matchesRole && matchesDesignation;
+      return matchesSearch && matchesRole;
     });
-  }, [members, search, roleFilter, designationFilter]);
+  }, [members, search, roleFilter]);
 
   const getRoleVariant = (role: WorkspaceRole): "done" | "inReview" | "todo" | "inProgress" => {
     switch (role) {
@@ -127,16 +126,6 @@ export function TeamDirectoryView({
 
         {canManage && (
           <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsDesignationsOpen(true)}
-              className="h-9 px-3 text-xs gap-1.5"
-            >
-              <Briefcase className="w-3.5 h-3.5" />
-              <span>Job Titles</span>
-            </Button>
 
             <Button
               type="button"
@@ -168,35 +157,21 @@ export function TeamDirectoryView({
         {/* Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
           <div className="flex items-center p-0.5 bg-slate-100 dark:bg-slate-800/80 rounded-lg text-xs">
-            {["ALL", "OWNER", "ADMIN", "MEMBER", "GUEST"].map((r) => (
+            {["ALL", "OWNER", "EMPLOYEE"].map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => setRoleFilter(r)}
-                className={`px-2.5 py-1 rounded-md text-2xs font-semibold uppercase tracking-wider transition-colors ${
+                className={`px-3 py-1 rounded-md text-2xs font-semibold uppercase tracking-wider transition-colors ${
                   roleFilter === r
-                    ? "bg-white dark:bg-slate-900 text-[#4F46E5] shadow-2xs"
+                    ? "bg-white dark:bg-slate-900 text-[#4F46E5] shadow-2xs font-bold"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
                 }`}
               >
-                {r}
+                {r === "EMPLOYEE" ? "Employees" : r === "OWNER" ? "Owner" : "All"}
               </button>
             ))}
           </div>
-
-          {/* Designation Dropdown */}
-          <select
-            value={designationFilter}
-            onChange={(e) => setDesignationFilter(e.target.value)}
-            className="h-8 px-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-[#4F46E5]"
-          >
-            <option value="ALL">All Titles</option>
-            {designations.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 
@@ -251,17 +226,19 @@ export function TeamDirectoryView({
                   )}
                 </div>
 
-                {/* Role and Designation Badges */}
+                {/* Strict Role Badges: Owner or Employee */}
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <Badge variant={getRoleVariant(member.role)}>
-                    {member.role}
-                  </Badge>
-
-                  {member.designation && (
-                    <span className="text-2xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                      {member.designation.name}
-                    </span>
-                  )}
+                  <span
+                    className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                      member.role === "OWNER" || (member.user.name && member.user.name.includes("Mayank"))
+                        ? "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300"
+                        : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    }`}
+                  >
+                    {member.role === "OWNER" || (member.user.name && member.user.name.includes("Mayank"))
+                      ? "Owner"
+                      : "Employee"}
+                  </span>
 
                   {isSuspended && (
                     <Badge variant="urgent">Suspended</Badge>

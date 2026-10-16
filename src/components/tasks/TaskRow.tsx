@@ -88,7 +88,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   const formattedDueDate = React.useMemo(() => {
     if (!task.dueDate) return null;
     const date = new Date(task.dueDate);
-    return date.toLocaleDateString(undefined, {
+    return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
     });

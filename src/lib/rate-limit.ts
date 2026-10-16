@@ -11,7 +11,7 @@ const devMemoryFallback = new Map<string, { count: number; expiresAt: number }>(
 
 /**
  * Shared serverless-compatible rate limiter.
- * Persists attempts to Neon PostgreSQL (rate_limits table) atomically across Vercel function instances.
+ * Persists attempts to PostgreSQL (rate_limits table) atomically across application instances.
  * Production must not fall back to process-memory-only rate limiting.
  */
 export async function checkRateLimit(

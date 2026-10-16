@@ -1,5 +1,5 @@
 // Taskora — Prisma Schema Foundation
-// Database: Neon PostgreSQL
+// Database: Supabase PostgreSQL (High-Performance Always-On)
 
 generator client {
   provider        = "prisma-client-js"
@@ -65,10 +65,15 @@ model Workspace {
   createdAt   DateTime              @default(now()) @map("created_at")
   updatedAt   DateTime              @updatedAt @map("updated_at")
 
-  members      WorkspaceMember[]
-  invitations  WorkspaceInvitation[]
-  designations Designation[]
-  tasks        Task[]
+  members        WorkspaceMember[]
+  invitations    WorkspaceInvitation[]
+  designations   Designation[]
+  tasks          Task[]
+  attendances    Attendance[]
+  officeLocation OfficeLocation?
+  projects       Project[]
+  conversations  Conversation[]
+  notifications  Notification[]
 
   @@map("workspaces")
 }
@@ -103,7 +108,14 @@ model WorkspaceMember {
   workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   designation   Designation?   @relation(fields: [designationId], references: [id], onDelete: SetNull)
-  assignedTasks Task[]         @relation("TaskAssignee")
+  assignedTasks            Task[]                   @relation("TaskAssignee")
+  attendances              Attendance[]
+  budgetSplits             ProjectBudgetSplit[]
+  conversationParticipants ConversationParticipant[]
+  sentMessages             Message[]
+  taskAssignments          TaskAssignment[]
+  receivedNotifications    Notification[]           @relation("NotificationRecipient")
+  sentNotifications        Notification[]           @relation("NotificationActor")
 
   @@unique([workspaceId, userId])
   @@index([workspaceId, status])
@@ -187,6 +199,8 @@ model Task {
   parent      Task?            @relation("TaskHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children    Task[]           @relation("TaskHierarchy")
   closedBy    User?            @relation("TaskClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  assignments TaskAssignment[]
+  chatMessages Message[]
 
   @@index([workspaceId, isArchived, status])
   @@index([workspaceId, assigneeId])
@@ -194,4 +208,178 @@ model Task {
   @@index([dueDate])
   @@map("tasks")
 }
+
+model Attendance {
+  id             String          @id @default(cuid())
+  workspaceId    String          @map("workspace_id")
+  memberId       String          @map("member_id")
+  date           String          // "YYYY-MM-DD"
+  checkInTime    DateTime        @map("check_in_time")
+  checkOutTime   DateTime?       @map("check_out_time")
+  checkInLat     Float?          @map("check_in_lat")
+  checkInLng     Float?          @map("check_in_lng")
+  checkOutLat    Float?          @map("check_out_lat")
+  checkOutLng    Float?          @map("check_out_lng")
+  distanceMeters Float?          @map("distance_meters")
+  status         String          @default("PRESENT") // PRESENT, LATE, COMPLETED
+  verified       Boolean         @default(true)
+  notes          String?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  member         WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, memberId, date])
+  @@index([workspaceId, date])
+  @@index([memberId])
+  @@map("attendances")
+}
+
+model OfficeLocation {
+  id           String    @id @default(cuid())
+  workspaceId  String    @unique @map("workspace_id")
+  name         String    @default("Head Office")
+  latitude     Float     @default(23.0225)
+  longitude    Float     @default(72.5714)
+  radiusMeters Float     @default(100.0) @map("radius_meters")
+  qrSecret     String    @default("TASKORA_OFFICE_SECRET_KEY") @map("qr_secret")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("office_locations")
+}
+
+model Project {
+  id             String               @id @default(cuid())
+  workspaceId    String               @map("workspace_id")
+  name           String
+  description    String?
+  clientName     String?              @map("client_name")
+  totalBudget    Float                @default(0.0) @map("total_budget")
+  currency       String               @default("USD")
+  status         String               @default("ACTIVE") // PLANNING, ACTIVE, IN_REVIEW, COMPLETED, ON_HOLD
+  companyPercent Float                @default(40.0) @map("company_percent") // e.g. 40% to Company Account
+  taxPercent     Float                @default(10.0) @map("tax_percent")     // e.g. 10% taxes
+  expenseAmount  Float                @default(0.0)  @map("expense_amount")  // Direct overhead/tool expenses
+  startDate      DateTime?            @map("start_date")
+  dueDate        DateTime?            @map("due_date")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  distributions  ProjectBudgetSplit[]
+
+  @@index([workspaceId, status])
+  @@map("projects")
+}
+
+model ProjectBudgetSplit {
+  id              String           @id @default(cuid())
+  projectId       String           @map("project_id")
+  memberId        String?          @map("member_id")
+  recipientName   String           @map("recipient_name")
+  role            String?
+  percentage      Float            @default(0.0)
+  allocatedAmount Float            @default(0.0) @map("allocated_amount")
+  status          String           @default("PENDING") // PENDING, APPROVED, DISBURSED
+  paidAt          DateTime?        @map("paid_at")
+  notes           String?
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member          WorkspaceMember? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([memberId])
+  @@map("project_budget_splits")
+}
+
+model Conversation {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  title       String?
+  isGroup     Boolean  @default(false) @map("is_group")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace    Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([workspaceId])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  memberId       String   @map("member_id")
+  joinedAt       DateTime @default(now()) @map("joined_at")
+  lastReadAt     DateTime @default(now()) @map("last_read_at")
+
+  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  member         WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, memberId])
+  @@index([memberId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  senderId       String   @map("sender_id")
+  content        String
+  taskId         String?  @map("task_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         WorkspaceMember @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  task           Task?           @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  recipientId String   @map("recipient_id")
+  actorId     String?  @map("actor_id")
+  type        String   // "TASK_ASSIGNED", "TASK_BROADCAST", "CHAT_MESSAGE", "OWNER_ALERT"
+  title       String
+  content     String
+  link        String?
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  recipient   WorkspaceMember  @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor       WorkspaceMember? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, recipientId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model TaskAssignment {
+  id        String          @id @default(cuid())
+  taskId    String          @map("task_id")
+  memberId  String          @map("member_id")
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  task      Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  member    WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, memberId])
+  @@index([memberId])
+  @@map("task_assignments")
+}
+
+
 

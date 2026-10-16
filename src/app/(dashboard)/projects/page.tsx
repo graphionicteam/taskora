@@ -1,19 +1,42 @@
+import React from "react";
 import { Metadata } from "next";
-import { PlaceholderView } from "@/components/layout/PlaceholderView";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { getActiveWorkspaceContext, getWorkspaceActiveMembers } from "@/lib/workspace";
+import { getProjectsWithFinancials } from "@/server/actions/project.actions";
+import { ProjectsBudgetView } from "@/components/projects/ProjectsBudgetView";
 
 export const metadata: Metadata = {
-  title: "Projects — Taskora",
-  description: "Workspace projects, milestones, and leaf progress.",
+  title: "Projects & Budget Splitting — Taskora",
+  description: "Multi-project tracking, budget allocation, company account splits, and team payouts.",
 };
 
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
+  const wsContext = await getActiveWorkspaceContext(session.user.id);
+  if (!wsContext) {
+    redirect("/dashboard");
+  }
+
+  const [{ projects, treasury }, members] = await Promise.all([
+    getProjectsWithFinancials(wsContext.workspace.id),
+    getWorkspaceActiveMembers(wsContext.workspace.id),
+  ]);
+
   return (
-    <PlaceholderView
-      title="Projects"
-      section="Workspace"
-      description="Project containers, member assignments, and progress tracking."
-      phaseNote="Project lifecycle (Planned/Active/On Hold/Completed/Archived) and leaf completion formulas are scheduled for Phase 06."
-      badgeVariant="todo"
+    <ProjectsBudgetView
+      workspace={{
+        id: wsContext.workspace.id,
+        name: wsContext.workspace.name,
+        slug: wsContext.workspace.slug,
+      }}
+      initialProjects={projects}
+      initialTreasury={treasury}
+      members={members}
     />
   );
 }

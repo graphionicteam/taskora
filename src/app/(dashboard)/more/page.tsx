@@ -8,6 +8,7 @@ import {
   Settings,
   User,
   ChevronRight,
+  QrCode,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -27,6 +28,12 @@ interface MoreItem {
 }
 
 const MORE_LINKS: MoreItem[] = [
+  {
+    title: "Office Attendance & Geofence",
+    subtitle: "Daily QR code check-in & 100m proximity",
+    href: "/attendance",
+    icon: QrCode,
+  },
   {
     title: "Team Directory",
     subtitle: "Members, designations, and permissions",

@@ -114,3 +114,16 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Completely suppress Next.js Dev Indicator badge */
+nextjs-portal,
+[data-nextjs-toast],
+[data-nextjs-dialog-overlay],
+div[data-nextjs-route-announcer],
+#__next-build-watcher {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
