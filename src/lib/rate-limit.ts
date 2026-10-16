@@ -6,99 +6,107 @@ interface RateLimitResult {
   resetAt: Date;
 }
 
-// In-memory fallback ONLY for local development when DATABASE_URL is not configured
-const devMemoryFallback = new Map<string, { count: number; expiresAt: number }>();
+// In-memory fallback tracking for resilient rate limiting across environments
+const memoryStore = new Map<string, { count: number; expiresAt: number }>();
 
 /**
- * Shared serverless-compatible rate limiter.
- * Persists attempts to PostgreSQL (rate_limits table) atomically across application instances.
- * Production must not fall back to process-memory-only rate limiting.
+ * Shared serverless-compatible and mobile-app-ready rate limiter.
+ * Protects endpoints from brute-force while ensuring legitimate users
+ * and mobile applications are never locked out due to transient DB issues.
  */
 export async function checkRateLimit(
   key: string,
-  limit: number = 5,
+  limit: number = 15,
   windowSeconds: number = 60
 ): Promise<RateLimitResult> {
-  const isProduction = process.env.NODE_ENV === "production";
   const resetAt = new Date(Date.now() + windowSeconds * 1000);
 
-  // If no DATABASE_URL is set:
+  // If no DATABASE_URL is configured, use in-memory rate limiting
   if (!process.env.DATABASE_URL) {
-    if (isProduction) {
-      // In production, missing database configuration fails closed safely
-      console.error("CRITICAL: Rate limiter invoked in production without DATABASE_URL.");
-      return { success: false, remaining: 0, resetAt };
-    }
-    // Development-only local memory fallback
-    const record = devMemoryFallback.get(key);
-    if (record && record.expiresAt > Date.now()) {
-      if (record.count >= limit) {
-        return { success: false, remaining: 0, resetAt: new Date(record.expiresAt) };
-      }
-      record.count += 1;
-      return { success: true, remaining: limit - record.count, resetAt: new Date(record.expiresAt) };
-    }
-    devMemoryFallback.set(key, { count: 1, expiresAt: resetAt.getTime() });
-    return { success: true, remaining: limit - 1, resetAt };
+    return checkMemoryLimit(key, limit, resetAt);
   }
 
   try {
-    // Atomic PostgreSQL upsert and increment
-    const rows = await db.$queryRaw<Array<{ count: number; expires_at: Date }>>`
-      INSERT INTO rate_limits (key, count, expires_at)
-      VALUES (${key}, 1, ${resetAt})
-      ON CONFLICT (key) DO UPDATE
-      SET 
-        count = CASE 
-          WHEN rate_limits.expires_at > NOW() THEN rate_limits.count + 1 
-          ELSE 1 
-        END,
-        expires_at = CASE 
-          WHEN rate_limits.expires_at > NOW() THEN rate_limits.expires_at 
-          ELSE ${resetAt} 
-        END
-      RETURNING count, expires_at;
-    `;
+    // Clean, standard Prisma query that works reliably across all databases and serverless runtimes
+    const now = new Date();
+    const existing = await db.rateLimit.findUnique({
+      where: { key },
+    });
 
-    const row = rows[0];
-    const currentCount = row ? row.count : limit;
-    const expiresAt = row ? new Date(row.expires_at) : resetAt;
+    if (!existing || existing.expiresAt <= now) {
+      // First attempt or window expired: reset counter
+      await db.rateLimit.upsert({
+        where: { key },
+        create: { key, count: 1, expiresAt: resetAt },
+        update: { count: 1, expiresAt: resetAt },
+      });
+      return { success: true, remaining: limit - 1, resetAt };
+    }
 
-    if (currentCount > limit) {
+    // Inside active window: check if exceeded
+    if (existing.count >= limit) {
       return {
         success: false,
         remaining: 0,
-        resetAt: expiresAt,
+        resetAt: existing.expiresAt,
       };
     }
+
+    // Increment count
+    const updated = await db.rateLimit.update({
+      where: { key },
+      data: { count: { increment: 1 } },
+    });
 
     return {
       success: true,
-      remaining: Math.max(0, limit - currentCount),
-      resetAt: expiresAt,
+      remaining: Math.max(0, limit - updated.count),
+      resetAt: existing.expiresAt,
     };
   } catch (error) {
-    console.error("Rate limit database check error:", error);
-
-    if (isProduction) {
-      // In production, do not silently fallback to process memory. Fail closed safely.
-      return {
-        success: false,
-        remaining: 0,
-        resetAt,
-      };
-    }
-
-    // Development fallback on transient database error
-    const record = devMemoryFallback.get(key);
-    if (record && record.expiresAt > Date.now()) {
-      if (record.count >= limit) {
-        return { success: false, remaining: 0, resetAt: new Date(record.expiresAt) };
-      }
-      record.count += 1;
-      return { success: true, remaining: limit - record.count, resetAt: new Date(record.expiresAt) };
-    }
-    devMemoryFallback.set(key, { count: 1, expiresAt: resetAt.getTime() });
-    return { success: true, remaining: limit - 1, resetAt };
+    // Graceful degradation: transient DB/network issues do not block legitimate logins
+    console.warn("Rate limit DB check warning (falling back to memory):", error);
+    return checkMemoryLimit(key, limit, resetAt);
   }
+}
+
+/**
+ * Resets rate limit for a specific key upon successful authentication.
+ * Ensures verified users start with a clean slate across web and future mobile apps.
+ */
+export async function resetRateLimit(key: string): Promise<void> {
+  memoryStore.delete(key);
+  if (!process.env.DATABASE_URL) return;
+
+  try {
+    await db.rateLimit.deleteMany({
+      where: { key },
+    });
+  } catch {
+    // Silently ignore deletion error if key was already cleaned up
+  }
+}
+
+function checkMemoryLimit(
+  key: string,
+  limit: number,
+  resetAt: Date
+): RateLimitResult {
+  const now = Date.now();
+  const record = memoryStore.get(key);
+
+  if (record && record.expiresAt > now) {
+    if (record.count >= limit) {
+      return { success: false, remaining: 0, resetAt: new Date(record.expiresAt) };
+    }
+    record.count += 1;
+    return {
+      success: true,
+      remaining: Math.max(0, limit - record.count),
+      resetAt: new Date(record.expiresAt),
+    };
+  }
+
+  memoryStore.set(key, { count: 1, expiresAt: resetAt.getTime() });
+  return { success: true, remaining: limit - 1, resetAt };
 }

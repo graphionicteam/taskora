@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { signIn, signOut } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
 import { loginSchema, registerSchema } from "@/lib/validations/auth";
 
 export interface ActionResult {
@@ -33,9 +33,9 @@ export async function loginAction(
 
   const { email, password } = parsed.data;
 
-  // Serverless rate-limiting check
-  const rateLimitKey = `login:${email}`;
-  const rateLimit = await checkRateLimit(rateLimitKey, 5, 60);
+  // Serverless and mobile-ready rate-limiting check
+  const rateLimitKey = `login:${email.toLowerCase().trim()}`;
+  const rateLimit = await checkRateLimit(rateLimitKey, 15, 60);
   if (!rateLimit.success) {
     return {
       error: "Too many login attempts. Please wait a minute before trying again.",
@@ -54,6 +54,10 @@ export async function loginAction(
       password,
       redirect: false,
     });
+
+    // Reset rate-limit tracker on successful authentication
+    await resetRateLimit(rateLimitKey);
+
     return { success: true };
   } catch (error) {
     if (error instanceof AuthError) {
