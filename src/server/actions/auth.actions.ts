@@ -44,7 +44,7 @@ export async function loginAction(
 
   if (!process.env.DATABASE_URL) {
     return {
-      error: "Database is not connected. Please configure DATABASE_URL in .env.local.",
+      error: "Database is not connected. Please add DATABASE_URL in your Vercel Environment Variables.",
     };
   }
 
