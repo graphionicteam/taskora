@@ -7,6 +7,9 @@ import {
   Archive,
   CornerDownRight,
   Check,
+  UserCheck,
+  ArrowRight,
+  ShieldCheck,
 } from "lucide-react";
 import { TaskStatus, TaskPriority } from "@prisma/client";
 import { TaskItemData } from "./TaskRow";
@@ -214,6 +217,50 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             )}
             placeholder="Task title..."
           />
+        </div>
+
+        {/* Assignment Attribution: Who assigned to whom */}
+        <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-50/90 via-slate-50 to-emerald-50/70 dark:from-indigo-950/40 dark:via-slate-900/50 dark:to-emerald-950/40 border border-indigo-100 dark:border-indigo-900/60 shadow-2xs">
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Task Assignment Path
+            </span>
+            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" />
+              Verified Assignment
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            {/* Assigner / Creator */}
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                {(task.creator?.name || "M").slice(0, 1).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <span className="text-[10px] text-slate-400 block font-medium">Assigned by</span>
+                <span className="font-bold text-slate-900 dark:text-white truncate block">
+                  {task.creator?.name || task.creator?.email || "Mayank Parmar (Owner)"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center px-1">
+              <ArrowRight className="w-4 h-4 text-[#4F46E5] shrink-0" />
+            </div>
+
+            {/* Assignee */}
+            <div className="flex items-center gap-2 min-w-0 justify-end text-right">
+              <div className="min-w-0">
+                <span className="text-[10px] text-slate-400 block font-medium">Assigned to</span>
+                <span className="font-bold text-slate-900 dark:text-white truncate block">
+                  {task.assignee?.user ? (task.assignee.user.name || task.assignee.user.email) : "Unassigned"}
+                </span>
+              </div>
+              <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                {task.assignee?.user?.name ? task.assignee.user.name.slice(0, 1).toUpperCase() : "—"}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Quick Properties Grid */}

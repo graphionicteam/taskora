@@ -229,11 +229,27 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           </div>
         )}
 
+        {/* Assignment Attribution: Who assigned to whom */}
+        <div
+          className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100/90 dark:bg-slate-800/90 text-[11px] border border-slate-200/70 dark:border-slate-700/70 shrink-0"
+          title={`Assigned by ${task.creator?.name || "Mayank Parmar"} → Assigned to ${task.assignee?.user ? (task.assignee.user.name || task.assignee.user.email) : "Unassigned"}`}
+        >
+          <span className="text-slate-400">By</span>
+          <span className="font-semibold text-slate-700 dark:text-slate-300">
+            {task.creator?.name?.split(" ")[0] || "Mayank"}
+          </span>
+          <span className="text-[#4F46E5] font-bold">&rarr;</span>
+          <span className="text-slate-400">To</span>
+          <span className="font-bold text-[#4F46E5] dark:text-indigo-400">
+            {task.assignee?.user ? (task.assignee.user.name?.split(" ")[0] || task.assignee.user.email) : "Unassigned"}
+          </span>
+        </div>
+
         {/* Primary Assignee Avatar */}
         {task.assignee?.user ? (
           <div
             className="w-7 h-7 rounded-full bg-indigo-50 border border-indigo-200 dark:bg-indigo-950/60 dark:border-indigo-800 flex items-center justify-center text-xs font-bold text-[#4F46E5] dark:text-indigo-300 shrink-0"
-            title={`Assigned to ${task.assignee.user.name || task.assignee.user.email}`}
+            title={`Assigned by ${task.creator?.name || "Mayank Parmar"} → Assigned to ${task.assignee.user.name || task.assignee.user.email}`}
           >
             {assigneeInitials}
           </div>

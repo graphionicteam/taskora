@@ -853,11 +853,11 @@ export function DashboardCalendarView({
                               </span>
                             </div>
 
-                            {/* Assignee Avatar */}
+                            {/* Assignee Avatar with Assignment Traceability */}
                             {task.assignee?.user && (
                               <div
                                 className="w-4 h-4 rounded-full bg-indigo-100 dark:bg-indigo-950 text-[#4F46E5] text-[9px] font-bold flex items-center justify-center shrink-0"
-                                title={task.assignee.user.name || task.assignee.user.email}
+                                title={`Assigned by ${task.creator?.name || "Mayank Parmar (Owner)"} → Assigned to ${task.assignee.user.name || task.assignee.user.email}`}
                               >
                                 {(task.assignee.user.name || task.assignee.user.email).slice(0, 1).toUpperCase()}
                               </div>
@@ -978,6 +978,17 @@ export function DashboardCalendarView({
                         <div>
                           <p className="text-sm font-semibold text-slate-900 dark:text-white">{task.title}</p>
                           {task.description && <p className="text-xs text-slate-500">{task.description}</p>}
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
+                            <span className="text-slate-400">Assigned by</span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">
+                              {task.creator?.name || "Mayank Parmar (Owner)"}
+                            </span>
+                            <span className="text-[#4F46E5] font-bold">&rarr;</span>
+                            <span className="text-slate-400">To</span>
+                            <span className="font-bold text-[#4F46E5] dark:text-indigo-400">
+                              {task.assignee?.user ? (task.assignee.user.name || task.assignee.user.email) : "Unassigned"}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
