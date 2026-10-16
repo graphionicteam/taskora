@@ -105,6 +105,7 @@ export function DashboardCalendarView({
   const [newDayTaskTitle, setNewDayTaskTitle] = useState("");
   const [newDayTaskPriority, setNewDayTaskPriority] = useState<TaskPriority>("MEDIUM");
 
+  const [todayFlash, setTodayFlash] = useState(false);
   const today = useMemo(() => new Date(), []);
 
   // Helper date normalization
@@ -306,7 +307,18 @@ export function DashboardCalendarView({
   };
 
   const handleToday = () => {
-    setCurrentDate(new Date());
+    const now = new Date();
+    setCurrentDate(now);
+    setTodayFlash(true);
+    setTimeout(() => {
+      const todayEl = document.getElementById("calendar-today-cell");
+      if (todayEl) {
+        todayEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 60);
+    setTimeout(() => {
+      setTodayFlash(false);
+    }, 2200);
   };
 
   // Quick toggle task status
@@ -469,7 +481,13 @@ export function DashboardCalendarView({
             size="sm"
             variant="outline"
             onClick={handleToday}
-            className="h-9 text-xs"
+            className={cn(
+              "h-9 text-xs font-semibold cursor-pointer transition-all",
+              isSameDay(currentDate, new Date())
+                ? "border-[#4F46E5] text-[#4F46E5] bg-indigo-50/50 dark:bg-indigo-950/30 ring-1 ring-[#4F46E5]/40"
+                : "hover:border-[#4F46E5] hover:text-[#4F46E5]"
+            )}
+            title="Jump to today's schedule"
           >
             Today
           </Button>
@@ -668,6 +686,13 @@ export function DashboardCalendarView({
               </button>
               <button
                 type="button"
+                onClick={handleToday}
+                className="px-2 py-1 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+              >
+                Today
+              </button>
+              <button
+                type="button"
                 onClick={handleNext}
                 aria-label="Next Period"
                 className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
@@ -707,11 +732,13 @@ export function DashboardCalendarView({
                 return (
                   <div
                     key={idx}
+                    id={item.isToday ? "calendar-today-cell" : undefined}
                     className={cn(
-                      "min-h-[125px] sm:min-h-[145px] p-2 flex flex-col justify-between transition-colors relative group",
+                      "min-h-[125px] sm:min-h-[145px] p-2 flex flex-col justify-between transition-all relative group",
                       !item.isCurrentMonth && "bg-slate-50/40 dark:bg-slate-950/30 text-slate-400",
                       item.isCurrentMonth && "bg-surface hover:bg-slate-50/50 dark:hover:bg-slate-850/50",
-                      item.isToday && "bg-indigo-50/20 dark:bg-indigo-950/20 ring-1 ring-inset ring-indigo-400/40"
+                      item.isToday && "bg-indigo-50/30 dark:bg-indigo-950/30 ring-2 ring-inset ring-[#4F46E5]",
+                      item.isToday && todayFlash && "ring-4 ring-indigo-500 scale-[1.01] shadow-lg z-10 duration-300"
                     )}
                   >
                     {/* Top Row: Date Number & Add Button */}
@@ -1078,11 +1105,17 @@ export function DashboardCalendarView({
                     onChange={(e) => setSocialAssigneeId(e.target.value)}
                     className="w-full h-9 px-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
                   >
-                    {members.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.user.name || m.user.email}
-                      </option>
-                    ))}
+                    {members
+                      .filter(
+                        (m) =>
+                          m.role !== "OWNER" &&
+                          !m.user.name?.toLowerCase().includes("mayank")
+                      )
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.user.name || m.user.email}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>

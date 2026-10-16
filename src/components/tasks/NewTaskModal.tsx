@@ -182,11 +182,17 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
               className="w-full h-9 px-2.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-surface text-slate-900 dark:text-slate-100 focus:outline-hidden truncate"
             >
               <option value="">Unassigned</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.user.name || m.user.email}
-                </option>
-              ))}
+              {members
+                .filter(
+                  (m) =>
+                    (m as any).role !== "OWNER" &&
+                    !m.user.name?.toLowerCase().includes("mayank")
+                )
+                .map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.user.name || m.user.email}
+                  </option>
+                ))}
             </select>
           </div>
         </div>

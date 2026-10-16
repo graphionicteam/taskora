@@ -231,6 +231,13 @@ export async function POST(request: Request, { params }: RouteParams) {
         { status: 400 }
       );
     }
+
+    if (assigneeMember.role === "OWNER") {
+      return NextResponse.json(
+        { error: "Tasks cannot be assigned to the workspace owner (Mayank Parmar). Only employees can be assigned tasks." },
+        { status: 400 }
+      );
+    }
   }
 
   // Parse dueDate
