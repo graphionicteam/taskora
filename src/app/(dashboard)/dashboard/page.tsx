@@ -133,6 +133,7 @@ export default async function DashboardPage() {
       members={members}
       currentMemberId={wsContext.member.id}
       currentUserName={session.user.name || session.user.email?.split("@")[0] || "User"}
+      currentUserRole={wsContext.role}
     />
   );
 }

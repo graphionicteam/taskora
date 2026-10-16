@@ -133,6 +133,7 @@ export default async function AllTasksPage() {
       members={members}
       viewMode="all"
       currentMemberId={wsContext.member.id}
+      currentUserRole={wsContext.role}
     />
   );
 }

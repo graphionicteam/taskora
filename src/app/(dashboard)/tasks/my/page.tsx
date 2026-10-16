@@ -134,6 +134,7 @@ export default async function MyTasksPage() {
       members={members}
       viewMode="my"
       currentMemberId={wsContext.member.id}
+      currentUserRole={wsContext.role}
     />
   );
 }

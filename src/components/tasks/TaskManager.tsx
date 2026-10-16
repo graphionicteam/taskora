@@ -15,6 +15,7 @@ import { QuickCreateTask } from "./QuickCreateTask";
 import { TaskDetailDrawer } from "./TaskDetailDrawer";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
+import { cn } from "@/lib/utils";
 
 interface WorkspaceMemberOption {
   id: string;
@@ -40,6 +41,7 @@ interface TaskManagerProps {
   members: WorkspaceMemberOption[];
   viewMode: "all" | "my";
   currentMemberId: string;
+  currentUserRole?: string;
 }
 
 export const TaskManager: React.FC<TaskManagerProps> = ({
@@ -48,12 +50,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
   members,
   viewMode,
   currentMemberId,
+  currentUserRole,
 }) => {
   const [tasks, setTasks] = useState<TaskItemData[]>(initialTasks);
   const [selectedTask, setSelectedTask] = useState<TaskItemData | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [priorityFilter, setPriorityFilter] = useState<string>("ALL");
+  const [quickTab, setQuickTab] = useState<"all" | "my" | "today" | "in_progress" | "completed" | "owner">("all");
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(
     new Set(initialTasks.map((t) => t.id))
   );
@@ -214,6 +218,47 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     return roots;
   }, [tasks]);
 
+  // Quick metric counts for direct navigation tabs
+  const tabCounts = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let myActive = 0;
+    let dueToday = 0;
+    let inProgress = 0;
+    let completed = 0;
+    let ownerAssigned = 0;
+
+    for (const t of tasks) {
+      const isComplete = t.status === "DONE" || t.status === "CLOSED";
+      if (t.assigneeId === currentMemberId && !isComplete) myActive++;
+      if (t.status === "IN_PROGRESS") inProgress++;
+      if (isComplete) completed++;
+
+      if (t.dueDate) {
+        const d = new Date(t.dueDate);
+        d.setHours(0, 0, 0, 0);
+        if (d.getTime() === today.getTime() && !isComplete) {
+          dueToday++;
+        }
+      }
+
+      const isByOwner =
+        t.creator?.name?.toLowerCase().includes("mayank") ||
+        t.creator?.email?.toLowerCase().includes("mayank");
+      if (isByOwner) ownerAssigned++;
+    }
+
+    return {
+      all: tasks.length,
+      my: myActive,
+      today: dueToday,
+      in_progress: inProgress,
+      completed,
+      owner: ownerAssigned,
+    };
+  }, [tasks, currentMemberId]);
+
   // Filter tasks
   const filteredTree = useMemo(() => {
     const searchLower = search.trim().toLowerCase();
@@ -235,6 +280,28 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
       // Check priority match
       const matchesPriority = priorityFilter === "ALL" || node.priority === priorityFilter;
 
+      // Check quick tab match
+      let matchesTab = true;
+      if (quickTab === "my") {
+        matchesTab = node.assigneeId === currentMemberId;
+      } else if (quickTab === "today") {
+        if (!node.dueDate) {
+          matchesTab = false;
+        } else {
+          const d = new Date(node.dueDate);
+          const now = new Date();
+          matchesTab = d.toDateString() === now.toDateString();
+        }
+      } else if (quickTab === "in_progress") {
+        matchesTab = node.status === "IN_PROGRESS";
+      } else if (quickTab === "completed") {
+        matchesTab = node.status === "DONE" || node.status === "CLOSED";
+      } else if (quickTab === "owner") {
+        matchesTab =
+          !!node.creator?.name?.toLowerCase().includes("mayank") ||
+          !!node.creator?.email?.toLowerCase().includes("mayank");
+      }
+
       // Filter children recursively
       const filteredChildren: TaskItemData[] = [];
       if (node.children) {
@@ -245,7 +312,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
       }
 
       // Keep node if it matches or has matching children
-      if ((matchesSearch && matchesStatus && matchesPriority) || filteredChildren.length > 0) {
+      if (
+        (matchesSearch && matchesStatus && matchesPriority && matchesTab) ||
+        filteredChildren.length > 0
+      ) {
         return {
           ...node,
           children: filteredChildren,
@@ -256,7 +326,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     }
 
     return taskTree.map(filterNode).filter(Boolean) as TaskItemData[];
-  }, [taskTree, search, statusFilter, priorityFilter]);
+  }, [taskTree, search, statusFilter, priorityFilter, quickTab, currentMemberId]);
 
   // Recursive renderer for tree rows
   const renderTaskRows = (nodes: TaskItemData[], depth = 0): React.ReactNode => {
@@ -316,6 +386,105 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         </div>
       </div>
 
+      {/* Quick Navigation Panel Tabs (Direct Go & Filter) */}
+      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-100/80 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800">
+        <button
+          type="button"
+          onClick={() => setQuickTab("all")}
+          className={cn(
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            quickTab === "all"
+              ? "bg-white dark:bg-slate-800 text-[#4F46E5] dark:text-indigo-400 shadow-2xs ring-1 ring-slate-200 dark:ring-slate-700"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+          )}
+        >
+          <span>All Tasks</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+            {tabCounts.all}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setQuickTab("my")}
+          className={cn(
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            quickTab === "my"
+              ? "bg-white dark:bg-slate-800 text-[#4F46E5] dark:text-indigo-400 shadow-2xs ring-1 ring-slate-200 dark:ring-slate-700"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+          )}
+        >
+          <span>My Assigned Tasks</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-indigo-100 dark:bg-indigo-950/60 text-[#4F46E5] dark:text-indigo-300 font-bold">
+            {tabCounts.my}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setQuickTab("today")}
+          className={cn(
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            quickTab === "today"
+              ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-2xs ring-1 ring-slate-200 dark:ring-slate-700"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+          )}
+        >
+          <span>Due Today</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 font-bold">
+            {tabCounts.today}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setQuickTab("in_progress")}
+          className={cn(
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            quickTab === "in_progress"
+              ? "bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-2xs ring-1 ring-slate-200 dark:ring-slate-700"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+          )}
+        >
+          <span>In Progress</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold">
+            {tabCounts.in_progress}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setQuickTab("completed")}
+          className={cn(
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            quickTab === "completed"
+              ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-2xs ring-1 ring-slate-200 dark:ring-slate-700"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+          )}
+        >
+          <span>Completed Tasks</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold">
+            {tabCounts.completed}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setQuickTab("owner")}
+          className={cn(
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            quickTab === "owner"
+              ? "bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 shadow-2xs ring-1 ring-amber-300 dark:ring-amber-700"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+          )}
+        >
+          <span>⭐ Assigned by Mayank</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-200/80 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-bold">
+            {tabCounts.owner}
+          </span>
+        </button>
+      </div>
+
       {/* Filter and Search Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 rounded-xl bg-surface border border-slate-200/90 dark:border-slate-800 shadow-2xs">
         {/* Search */}
@@ -373,21 +542,24 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         members={members}
         onTaskCreated={refreshTasks}
         defaultAssigneeId={viewMode === "my" ? currentMemberId : null}
+        currentUserRole={currentUserRole}
       />
 
       {/* Task Table Container */}
       <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-surface shadow-2xs overflow-hidden">
-        {/* Table Header: 44px height */}
-        <div className="flex items-center justify-between h-11 px-4 bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider select-none">
-          <div className="flex items-center gap-2 flex-1">
+        {/* Table Header: 44px height pixel-perfect aligned with TaskRow */}
+        <div className="flex items-center justify-between h-11 px-3 sm:px-4 bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider select-none">
+          <div className="flex items-center gap-2 flex-1 min-w-0 mr-3">
             <span>Task Title & Subtasks</span>
           </div>
 
-          <div className="flex items-center gap-4 sm:gap-6">
-            <span className="hidden md:inline w-16 text-center">Priority</span>
-            <span className="hidden sm:inline w-20 text-center">Status</span>
-            <span className="hidden lg:inline w-20 text-center">Due Date</span>
-            <span className="w-16 text-center">Assignee</span>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="hidden md:inline-block w-20 text-center">Priority</span>
+            <span className="hidden sm:inline-block w-24 text-center">Status</span>
+            <span className="hidden lg:inline-block w-24 text-center">Due Date</span>
+            <span className="hidden xl:inline-block w-44 text-center">Assignment</span>
+            <span className="inline-block w-14 text-center">Assignee</span>
+            <span className="w-6" aria-hidden="true" />
           </div>
         </div>
 
@@ -405,7 +577,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
               No tasks found
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-              {search || statusFilter !== "ALL" || priorityFilter !== "ALL"
+              {search || statusFilter !== "ALL" || priorityFilter !== "ALL" || quickTab !== "all"
                 ? "Try adjusting your search or filters to see more tasks."
                 : "Create your first task above to begin organizing your work."}
             </p>
@@ -420,6 +592,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
           task={selectedTask}
           workspaceId={workspace.id}
           members={members}
+          currentUserRole={currentUserRole}
           onClose={() => setSelectedTask(null)}
           onUpdateTask={handleUpdateTask}
           onArchiveTask={handleArchiveTask}

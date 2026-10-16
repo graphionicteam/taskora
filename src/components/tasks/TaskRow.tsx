@@ -222,82 +222,92 @@ export const TaskRow: React.FC<TaskRowProps> = ({
         )}
       </div>
 
-      {/* Right side: Priority, Status, Due date, Assignee & Actions */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        {/* Priority Badge */}
-        <div className="hidden md:block">
+      {/* Right side: Priority, Status, Due date, Assignment Path, Assignee & Actions */}
+      <div className="flex items-center gap-3 shrink-0">
+        {/* Priority Badge: fixed w-20 */}
+        <div className="hidden md:flex w-20 justify-center">
           <TaskPriorityBadge priority={task.priority} />
         </div>
 
-        {/* Status Badge */}
-        <div className="hidden sm:block">
+        {/* Status Badge: fixed w-24 */}
+        <div className="hidden sm:flex w-24 justify-center">
           <TaskStatusBadge status={task.status} />
         </div>
 
-        {/* Due Date */}
-        {formattedDueDate && (
-          <div
-            className={cn(
-              "hidden lg:flex items-center gap-1 text-xs px-2 py-0.5 rounded-md",
-              isOverdue
-                ? "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 font-semibold"
-                : "text-slate-500 dark:text-slate-400"
-            )}
-            title={isOverdue ? "Overdue deadline" : "Due date"}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>{formattedDueDate}</span>
-          </div>
-        )}
-
-        {/* Assignment Attribution: Who assigned to whom */}
-        <div
-          className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100/90 dark:bg-slate-800/90 text-[11px] border border-slate-200/70 dark:border-slate-700/70 shrink-0"
-          title={`Assigned by ${task.creator?.name || "Mayank Parmar"} → Assigned to ${task.assignee?.user ? (task.assignee.user.name || task.assignee.user.email) : "Unassigned"}`}
-        >
-          <span className="text-slate-400">By</span>
-          <span className="font-semibold text-slate-700 dark:text-slate-300">
-            {task.creator?.name?.split(" ")[0] || "Mayank"}
-          </span>
-          <span className="text-[#4F46E5] font-bold">&rarr;</span>
-          <span className="text-slate-400">To</span>
-          <span className="font-bold text-[#4F46E5] dark:text-indigo-400">
-            {task.assignee?.user ? (task.assignee.user.name?.split(" ")[0] || task.assignee.user.email) : "Unassigned"}
-          </span>
+        {/* Due Date: fixed w-24 */}
+        <div className="hidden lg:flex w-24 justify-center">
+          {formattedDueDate ? (
+            <div
+              className={cn(
+                "flex items-center gap-1 text-xs px-2 py-0.5 rounded-md",
+                isOverdue
+                  ? "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 font-semibold"
+                  : "text-slate-500 dark:text-slate-400"
+              )}
+              title={isOverdue ? "Overdue deadline" : "Due date"}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>{formattedDueDate}</span>
+            </div>
+          ) : (
+            <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
+          )}
         </div>
 
-        {/* Primary Assignee Avatar */}
-        {task.assignee?.user ? (
+        {/* Assignment Attribution: fixed w-44 */}
+        <div className="hidden xl:flex w-44 justify-center">
           <div
-            className="w-7 h-7 rounded-full bg-indigo-50 border border-indigo-200 dark:bg-indigo-950/60 dark:border-indigo-800 flex items-center justify-center text-xs font-bold text-[#4F46E5] dark:text-indigo-300 shrink-0"
-            title={`Assigned by ${task.creator?.name || "Mayank Parmar"} → Assigned to ${task.assignee.user.name || task.assignee.user.email}`}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100/90 dark:bg-slate-800/90 text-[11px] border border-slate-200/70 dark:border-slate-700/70 max-w-full truncate"
+            title={`Assigned by ${task.creator?.name || "Mayank Parmar"} → Assigned to ${task.assignee?.user ? (task.assignee.user.name || task.assignee.user.email) : "Unassigned"}`}
           >
-            {assigneeInitials}
+            <span className="text-slate-400">By</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[55px]">
+              {task.creator?.name?.split(" ")[0] || "Mayank"}
+            </span>
+            <span className="text-[#4F46E5] font-bold">&rarr;</span>
+            <span className="text-slate-400">To</span>
+            <span className="font-bold text-[#4F46E5] dark:text-indigo-400 truncate max-w-[55px]">
+              {task.assignee?.user ? (task.assignee.user.name?.split(" ")[0] || task.assignee.user.email) : "None"}
+            </span>
           </div>
-        ) : (
-          <div
-            className="w-7 h-7 rounded-full border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400 text-2xs"
-            title="Unassigned"
-          >
-            —
-          </div>
-        )}
+        </div>
+
+        {/* Primary Assignee Avatar: fixed w-14 */}
+        <div className="w-14 flex items-center justify-center">
+          {task.assignee?.user ? (
+            <div
+              className="w-7 h-7 rounded-full bg-indigo-50 border border-indigo-200 dark:bg-indigo-950/60 dark:border-indigo-800 flex items-center justify-center text-xs font-bold text-[#4F46E5] dark:text-indigo-300 shrink-0 shadow-2xs"
+              title={`Assigned by ${task.creator?.name || "Mayank Parmar"} → Assigned to ${task.assignee.user.name || task.assignee.user.email}`}
+            >
+              {assigneeInitials}
+            </div>
+          ) : (
+            <div
+              className="w-7 h-7 rounded-full border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400 text-2xs"
+              title="Unassigned"
+            >
+              —
+            </div>
+          )}
+        </div>
 
         {/* Quick Add Subtask Button (visible on hover) */}
-        {onQuickAddSubtask && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuickAddSubtask(task.id);
-            }}
-            className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-[#4F46E5] hover:bg-slate-100 dark:hover:bg-slate-800 transition-opacity"
-            title="Add subtask"
-            aria-label="Add subtask"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        )}
+        <div className="w-6 flex items-center justify-center">
+          {onQuickAddSubtask && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuickAddSubtask(task.id);
+              }}
+              className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-[#4F46E5] hover:bg-slate-100 dark:hover:bg-slate-800 transition-opacity"
+              title="Add subtask"
+              aria-label="Add subtask"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

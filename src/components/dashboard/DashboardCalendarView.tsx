@@ -73,10 +73,20 @@ interface DashboardCalendarViewProps {
   members: WorkspaceMemberOption[];
   currentMemberId: string;
   currentUserName: string;
+  currentUserRole?: string;
 }
 
 type ViewMode = "month" | "week" | "day";
-type TaskFilterType = "all" | "group" | "my" | "social" | "projects" | "clients";
+type TaskFilterType =
+  | "all"
+  | "group"
+  | "my"
+  | "social"
+  | "projects"
+  | "clients"
+  | "today"
+  | "overdue"
+  | "completed";
 
 export function DashboardCalendarView({
   initialTasks,
@@ -84,6 +94,7 @@ export function DashboardCalendarView({
   members,
   currentMemberId,
   currentUserName,
+  currentUserRole,
 }: DashboardCalendarViewProps) {
   const [tasks, setTasks] = useState<TaskItemData[]>(initialTasks);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -178,8 +189,23 @@ export function DashboardCalendarView({
           task.description?.toLowerCase().includes("broadcast");
         if (!isTeamBroadcast) return false;
       }
-      if (filterType === "my" && task.assigneeId !== currentMemberId) {
-        return false;
+      if (filterType === "my") {
+        if (task.assigneeId !== currentMemberId) return false;
+        if (task.status === "DONE" || task.status === "CLOSED") return false;
+      }
+      if (filterType === "today") {
+        if (!task.dueDate) return false;
+        if (!isSameDay(new Date(task.dueDate), today)) return false;
+        if (task.status === "DONE" || task.status === "CLOSED") return false;
+      }
+      if (filterType === "overdue") {
+        if (!task.dueDate) return false;
+        const due = new Date(task.dueDate);
+        if (due >= today || isSameDay(due, today)) return false;
+        if (task.status === "DONE" || task.status === "CLOSED") return false;
+      }
+      if (filterType === "completed") {
+        if (task.status !== "DONE" && task.status !== "CLOSED") return false;
       }
       if (filterType === "social" && !isSocialTask(task)) {
         return false;
@@ -187,7 +213,7 @@ export function DashboardCalendarView({
 
       return true;
     });
-  }, [tasks, selectedMemberId, filterType, currentMemberId]);
+  }, [tasks, selectedMemberId, filterType, currentMemberId, today]);
 
   // Compute KPI metrics
   const kpiStats = useMemo(() => {
@@ -566,73 +592,153 @@ export function DashboardCalendarView({
         </div>
       </div>
 
-      {/* KPI Stats Cards */}
+      {/* KPI Stats Cards (Interactive Direct Navigation & Filter Panel) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="p-4 bg-surface hover:border-slate-300 transition-colors">
+        {/* My Active Card */}
+        <Card
+          onClick={() => setFilterType((prev) => (prev === "my" ? "all" : "my"))}
+          className={cn(
+            "p-4 bg-surface transition-all cursor-pointer select-none group border",
+            filterType === "my"
+              ? "ring-2 ring-[#4F46E5] bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800 shadow-sm"
+              : "hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xs"
+          )}
+          title={filterType === "my" ? "Click to reset filter" : "Click to view your active tasks"}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              My Active
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <span>My Active</span>
+              {filterType === "my" && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#4F46E5] text-white font-bold">
+                  Active
+                </span>
+              )}
             </span>
             <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 text-[#4F46E5] flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">
-              {kpiStats.myActive}
+          <div className="mt-3 flex items-baseline justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                {kpiStats.myActive}
+              </span>
+              <span className="text-xs text-slate-500">assigned tasks</span>
+            </div>
+            <span className="text-[11px] text-[#4F46E5] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+              {filterType === "my" ? "Reset" : "Filter →"}
             </span>
-            <span className="text-xs text-slate-500">assigned tasks</span>
           </div>
         </Card>
 
-        <Card className="p-4 bg-surface hover:border-slate-300 transition-colors">
+        {/* Due Today Card */}
+        <Card
+          onClick={() => setFilterType((prev) => (prev === "today" ? "all" : "today"))}
+          className={cn(
+            "p-4 bg-surface transition-all cursor-pointer select-none group border",
+            filterType === "today"
+              ? "ring-2 ring-blue-500 bg-blue-50/70 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 shadow-sm"
+              : "hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-xs"
+          )}
+          title={filterType === "today" ? "Click to reset filter" : "Click to view tasks due today"}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Due Today
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <span>Due Today</span>
+              {filterType === "today" && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-600 text-white font-bold">
+                  Active
+                </span>
+              )}
             </span>
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 text-blue-600 flex items-center justify-center">
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">
-              {kpiStats.dueToday}
+          <div className="mt-3 flex items-baseline justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                {kpiStats.dueToday}
+              </span>
+              <span className="text-xs text-slate-500">actionable today</span>
+            </div>
+            <span className="text-[11px] text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+              {filterType === "today" ? "Reset" : "Filter →"}
             </span>
-            <span className="text-xs text-slate-500">actionable today</span>
           </div>
         </Card>
 
-        <Card className="p-4 bg-surface hover:border-slate-300 transition-colors">
+        {/* Overdue Card */}
+        <Card
+          onClick={() => setFilterType((prev) => (prev === "overdue" ? "all" : "overdue"))}
+          className={cn(
+            "p-4 bg-surface transition-all cursor-pointer select-none group border",
+            filterType === "overdue"
+              ? "ring-2 ring-rose-500 bg-rose-50/70 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 shadow-sm"
+              : "hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-xs"
+          )}
+          title={filterType === "overdue" ? "Click to reset filter" : "Click to view overdue tasks"}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Overdue
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <span>Overdue</span>
+              {filterType === "overdue" && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-rose-600 text-white font-bold">
+                  Active
+                </span>
+              )}
             </span>
             <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200/60 text-rose-600 flex items-center justify-center">
               <AlertCircle className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-rose-600 dark:text-rose-400">
-              {kpiStats.overdue}
+          <div className="mt-3 flex items-baseline justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-rose-600 dark:text-rose-400">
+                {kpiStats.overdue}
+              </span>
+              <span className="text-xs text-slate-500">needs attention</span>
+            </div>
+            <span className="text-[11px] text-rose-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+              {filterType === "overdue" ? "Reset" : "Filter →"}
             </span>
-            <span className="text-xs text-slate-500">needs attention</span>
           </div>
         </Card>
 
-        <Card className="p-4 bg-surface hover:border-slate-300 transition-colors">
+        {/* Completed Card */}
+        <Card
+          onClick={() => setFilterType((prev) => (prev === "completed" ? "all" : "completed"))}
+          className={cn(
+            "p-4 bg-surface transition-all cursor-pointer select-none group border",
+            filterType === "completed"
+              ? "ring-2 ring-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 shadow-sm"
+              : "hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs"
+          )}
+          title={filterType === "completed" ? "Click to reset filter" : "Click to view completed tasks"}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Completed
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <span>Completed</span>
+              {filterType === "completed" && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-600 text-white font-bold">
+                  Active
+                </span>
+              )}
             </span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 text-emerald-600 flex items-center justify-center">
               <CheckSquare className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-              {kpiStats.completedThisWeek}
+          <div className="mt-3 flex items-baseline justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {kpiStats.completedThisWeek}
+              </span>
+              <span className="text-xs text-slate-500">this week</span>
+            </div>
+            <span className="text-[11px] text-emerald-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+              {filterType === "completed" ? "Reset" : "Filter →"}
             </span>
-            <span className="text-xs text-slate-500">this week</span>
           </div>
         </Card>
       </div>
@@ -661,6 +767,58 @@ export function DashboardCalendarView({
           </button>
           <button
             type="button"
+            onClick={() => setFilterType((prev) => (prev === "my" ? "all" : "my"))}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
+              filterType === "my"
+                ? "bg-[#4F46E5] text-white shadow-2xs"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+            )}
+          >
+            <User className="w-3.5 h-3.5" />
+            My Active ({kpiStats.myActive})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterType((prev) => (prev === "today" ? "all" : "today"))}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
+              filterType === "today"
+                ? "bg-blue-600 text-white shadow-2xs"
+                : "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-slate-200"
+            )}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            Due Today ({kpiStats.dueToday})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterType((prev) => (prev === "overdue" ? "all" : "overdue"))}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
+              filterType === "overdue"
+                ? "bg-rose-600 text-white shadow-2xs"
+                : "bg-slate-100 dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-slate-200"
+            )}
+          >
+            <AlertCircle className="w-3.5 h-3.5" />
+            Overdue ({kpiStats.overdue})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterType((prev) => (prev === "completed" ? "all" : "completed"))}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
+              filterType === "completed"
+                ? "bg-emerald-600 text-white shadow-2xs"
+                : "bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 hover:bg-slate-200"
+            )}
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+            Completed ({kpiStats.completedThisWeek})
+          </button>
+          <button
+            type="button"
             onClick={() => setFilterType("group")}
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
@@ -671,19 +829,6 @@ export function DashboardCalendarView({
           >
             <Users className="w-3.5 h-3.5" />
             Full Group Tasks
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType("my")}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-              filterType === "my"
-                ? "bg-[#4F46E5] text-white shadow-2xs"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
-            )}
-          >
-            <User className="w-3.5 h-3.5" />
-            My Direct Tasks
           </button>
           <button
             type="button"

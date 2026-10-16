@@ -45,6 +45,7 @@ interface TaskDetailDrawerProps {
   onUpdateTask: (taskId: string, updates: Record<string, unknown>) => Promise<{ error?: string; [key: string]: unknown }>;
   onArchiveTask: (taskId: string) => Promise<{ error?: string; [key: string]: unknown }>;
   onSelectTask: (task: TaskItemData) => void;
+  currentUserRole?: string;
 }
 
 export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
@@ -55,7 +56,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   onUpdateTask,
   onArchiveTask,
   onSelectTask,
+  currentUserRole,
 }) => {
+  const isOwner = currentUserRole === "OWNER" || currentUserRole === "ADMIN";
   const [prevTaskId, setPrevTaskId] = useState<string | null>(task?.id || null);
   const [title, setTitle] = useState(task?.title || "");
   const [description, setDescription] = useState(task?.description || "");
@@ -443,8 +446,11 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 setPriority(newPriority);
                 handleSaveField({ priority: newPriority });
               }}
-              disabled={isPending}
-              className="w-full h-9 px-2.5 text-xs font-semibold rounded-lg bg-surface border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5] cursor-pointer"
+              disabled={!isOwner || isPending}
+              className={cn(
+                "w-full h-9 px-2.5 text-xs font-semibold rounded-lg bg-surface border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5]",
+                !isOwner ? "cursor-not-allowed opacity-80" : "cursor-pointer"
+              )}
             >
               <option value="LOW">Low</option>
               <option value="MEDIUM">Medium</option>
@@ -458,23 +464,37 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
               Primary Assignee
             </label>
-            <select
-              value={assigneeId}
-              onChange={(e) => {
-                const val = e.target.value || null;
-                setAssigneeId(val || "");
-                handleSaveField({ assigneeId: val });
-              }}
-              disabled={isPending}
-              className="w-full h-9 px-2.5 text-xs font-medium rounded-lg bg-surface border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5] cursor-pointer truncate"
-            >
-              <option value="">Unassigned</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.user.name || m.user.email} ({m.designation?.name || m.role})
-                </option>
-              ))}
-            </select>
+            {isOwner ? (
+              <select
+                value={assigneeId}
+                onChange={(e) => {
+                  const val = e.target.value || null;
+                  setAssigneeId(val || "");
+                  handleSaveField({ assigneeId: val });
+                }}
+                disabled={isPending}
+                className="w-full h-9 px-2.5 text-xs font-medium rounded-lg bg-surface border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5] cursor-pointer truncate"
+              >
+                <option value="">Unassigned</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.user.name || m.user.email} ({m.designation?.name || m.role})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
+                <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block">
+                    {task.assignee?.user?.name || task.assignee?.user?.email || "Unassigned"}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    🔒 Assigned by Owner ({task.creator?.name || "Mayank Parmar"})
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Due Date */}
@@ -490,8 +510,11 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 setDueDate(val);
                 handleSaveField({ dueDate: val || null });
               }}
-              disabled={isPending}
-              className="w-full h-9 px-2.5 text-xs font-medium rounded-lg bg-surface border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5] cursor-pointer"
+              disabled={!isOwner || isPending}
+              className={cn(
+                "w-full h-9 px-2.5 text-xs font-medium rounded-lg bg-surface border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5]",
+                !isOwner ? "cursor-not-allowed opacity-80" : "cursor-pointer"
+              )}
             />
           </div>
         </div>
@@ -670,15 +693,22 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
       {/* Footer bar: Actions */}
       <div className="p-4 px-6 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-slate-900/50">
-        <button
-          type="button"
-          onClick={handleArchive}
-          disabled={isPending}
-          className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-        >
-          <Archive className="w-4 h-4" />
-          Archive Task
-        </button>
+        {isOwner ? (
+          <button
+            type="button"
+            onClick={handleArchive}
+            disabled={isPending}
+            className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+          >
+            <Archive className="w-4 h-4" />
+            Archive Task
+          </button>
+        ) : (
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>Workspace Owner Supervision Active</span>
+          </div>
+        )}
 
         <Button
           type="button"

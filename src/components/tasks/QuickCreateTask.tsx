@@ -21,6 +21,7 @@ interface QuickCreateTaskProps {
   members: WorkspaceMemberOption[];
   onTaskCreated: () => void;
   defaultAssigneeId?: string | null;
+  currentUserRole?: string;
 }
 
 export const QuickCreateTask: React.FC<QuickCreateTaskProps> = ({
@@ -28,6 +29,7 @@ export const QuickCreateTask: React.FC<QuickCreateTaskProps> = ({
   members,
   onTaskCreated,
   defaultAssigneeId,
+  currentUserRole,
 }) => {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
@@ -36,6 +38,16 @@ export const QuickCreateTask: React.FC<QuickCreateTaskProps> = ({
   const [showOptions, setShowOptions] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const isOwner = currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+  const assignableMembers = members.filter((m) => {
+    if (isOwner) return true;
+    const isMayank =
+      m.role === "OWNER" ||
+      m.user.name?.toLowerCase().includes("mayank") ||
+      m.user.email?.toLowerCase().includes("mayank");
+    return !isMayank;
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,7 +158,7 @@ export const QuickCreateTask: React.FC<QuickCreateTaskProps> = ({
                 className="h-7 px-2 text-xs rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden max-w-[150px] truncate"
               >
                 <option value="">Unassigned</option>
-                {members.map((m) => (
+                {assignableMembers.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.user.name || m.user.email}
                   </option>
