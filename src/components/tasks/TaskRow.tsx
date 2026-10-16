@@ -58,6 +58,7 @@ interface TaskRowProps {
   isExpanded?: boolean;
   isSelected?: boolean;
   currentMemberId?: string;
+  currentUserRole?: string;
   onToggleExpand?: (taskId: string) => void;
   onSelectTask: (task: TaskItemData) => void;
   onQuickStatusChange: (taskId: string, targetStatus: TaskStatus) => void;
@@ -70,6 +71,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   isExpanded = true,
   isSelected = false,
   currentMemberId,
+  currentUserRole,
   onToggleExpand,
   onSelectTask,
   onQuickStatusChange,
@@ -78,15 +80,18 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   const hasChildren = (task.children?.length ?? 0) > 0;
   const isCompleted = task.status === "DONE" || task.status === "CLOSED";
 
+  const isOwner = currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+  const isAssignedToMe = Boolean(task.assigneeId && task.assigneeId === currentMemberId);
+  const canInteract = isOwner || isAssignedToMe;
+
   // Check if task is assigned by Owner (Mayank Parmar) directly to the viewing member
   const isAssignedByOwnerToMe = React.useMemo(() => {
     if (!currentMemberId) return false;
     const isOwnerCreator =
       task.creator?.name?.toLowerCase().includes("mayank") ||
       task.creator?.email?.toLowerCase().includes("mayank");
-    const isMe = task.assigneeId === currentMemberId;
-    return Boolean(isOwnerCreator && isMe);
-  }, [task.creator, task.assigneeId, currentMemberId]);
+    return Boolean(isOwnerCreator && isAssignedToMe);
+  }, [task.creator, isAssignedToMe, currentMemberId]);
 
   // Check if task is overdue (dueDate < now && !isCompleted)
   const isOverdue = React.useMemo(() => {
@@ -175,9 +180,29 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
+            if (!canInteract) {
+              const assigneeName = task.assignee?.user?.name?.split(" ")[0] || "assigned member";
+              alert(
+                `View-Only: This task is assigned to ${assigneeName} by the Owner. Other members can view details, but cannot edit or change anything.`
+              );
+              return;
+            }
             onQuickStatusChange(task.id, isCompleted ? "TODO" : "DONE");
           }}
-          className="shrink-0 text-slate-400 hover:text-[#4F46E5] dark:text-slate-500 dark:hover:text-indigo-400 transition-colors p-0.5"
+          disabled={!canInteract}
+          className={cn(
+            "shrink-0 transition-colors p-0.5",
+            canInteract
+              ? "text-slate-400 hover:text-[#4F46E5] dark:text-slate-500 dark:hover:text-indigo-400 cursor-pointer"
+              : "text-slate-300 dark:text-slate-600 opacity-60 cursor-not-allowed"
+          )}
+          title={
+            !canInteract
+              ? `View-Only: Owner shared to ${task.assignee?.user?.name || "assigned member"}`
+              : isCompleted
+              ? "Mark task incomplete"
+              : "Mark task done"
+          }
           aria-label={isCompleted ? "Mark task incomplete" : "Mark task done"}
         >
           {task.status === "DONE" || task.status === "CLOSED" ? (
@@ -207,6 +232,13 @@ export const TaskRow: React.FC<TaskRowProps> = ({
         {isAssignedByOwnerToMe && (
           <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-700/80 shrink-0 shadow-2xs animate-pulse">
             <span>⭐ Assigned to You by Mayank Parmar</span>
+          </span>
+        )}
+
+        {/* Other Person View-Only Attribution Tag */}
+        {!isOwner && !isAssignedToMe && task.assignee?.user && (
+          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 shrink-0 border border-slate-200 dark:border-slate-700">
+            <span>👁️ Owner shared to {task.assignee.user.name?.split(" ")[0] || "member"}</span>
           </span>
         )}
 
@@ -291,9 +323,9 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           )}
         </div>
 
-        {/* Quick Add Subtask Button (visible on hover) */}
+        {/* Quick Add Subtask Button (visible on hover only for owner or assignee) */}
         <div className="w-6 flex items-center justify-center">
-          {onQuickAddSubtask && (
+          {canInteract && onQuickAddSubtask && (
             <button
               type="button"
               onClick={(e) => {

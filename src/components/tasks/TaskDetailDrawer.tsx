@@ -46,6 +46,7 @@ interface TaskDetailDrawerProps {
   onArchiveTask: (taskId: string) => Promise<{ error?: string; [key: string]: unknown }>;
   onSelectTask: (task: TaskItemData) => void;
   currentUserRole?: string;
+  currentMemberId?: string;
 }
 
 export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
@@ -57,8 +58,11 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   onArchiveTask,
   onSelectTask,
   currentUserRole,
+  currentMemberId,
 }) => {
   const isOwner = currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+  const isAssignedToMe = Boolean(task?.assigneeId && task.assigneeId === currentMemberId);
+  const isOtherPerson = !isOwner && !isAssignedToMe;
   const [prevTaskId, setPrevTaskId] = useState<string | null>(task?.id || null);
   const [title, setTitle] = useState(task?.title || "");
   const [description, setDescription] = useState(task?.description || "");
@@ -116,12 +120,14 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   };
 
   const handleDescriptionBlur = () => {
+    if (isOtherPerson) return;
     if (description !== (task.description || "")) {
       handleSaveField({ description: description.trim() || null });
     }
   };
 
   const handleSaveField = (updates: Record<string, unknown>) => {
+    if (isOtherPerson) return;
     setErrorMessage(null);
     startTransition(async () => {
       const res = await onUpdateTask(task.id, updates);
@@ -136,6 +142,10 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
   const handleAddSubtask = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isOtherPerson) {
+      alert("Only Mayank Parmar (Owner) or the direct assignee can add subtasks.");
+      return;
+    }
     const cleanTitle = newSubtaskTitle.trim();
     if (!cleanTitle) return;
 
@@ -188,6 +198,10 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   };
 
   const handleToggleSubtask = async (subtaskId: string, currentStatus: TaskStatus) => {
+    if (isOtherPerson) {
+      alert(`This task is assigned to ${task.assignee?.user?.name || "another team member"}. Only the direct assignee or Owner can check off subtasks.`);
+      return;
+    }
     const newStatus: TaskStatus =
       currentStatus === "DONE" || currentStatus === "CLOSED" ? "TODO" : "DONE";
 
@@ -227,6 +241,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
   const handleDeleteSubtask = async (subtaskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isOtherPerson) return;
     if (!window.confirm("Are you sure you want to delete this subtask?")) return;
 
     setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
@@ -241,6 +256,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   };
 
   const handleCompleteAllSubtasks = async () => {
+    if (isOtherPerson) return;
     const activeSubs = subtasks.filter(
       (s) => s.status !== "DONE" && s.status !== "CLOSED"
     );
@@ -269,6 +285,10 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   };
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
+    if (isOtherPerson) {
+      alert(`This task was assigned to ${task.assignee?.user?.name || "another team member"} by the Owner. You can view all details, but cannot edit.`);
+      return;
+    }
     setStatus(newStatus);
     if ((newStatus === "DONE" || newStatus === "CLOSED") && subtasks.length > 0) {
       const activeSubs = subtasks.filter(
@@ -347,6 +367,23 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
           </div>
         )}
 
+        {/* View-Only Banner when task is assigned by Owner to another member */}
+        {isOtherPerson && (
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-50/90 via-slate-50 to-amber-50/80 dark:from-indigo-950/40 dark:via-slate-900/50 dark:to-amber-950/40 border border-indigo-200 dark:border-indigo-900/80 flex items-center gap-3 text-xs text-slate-700 dark:text-slate-300 shadow-2xs">
+            <ShieldCheck className="w-5 h-5 text-[#4F46E5] dark:text-indigo-400 shrink-0" />
+            <div>
+              <span className="font-bold text-slate-900 dark:text-white">View-Only Mode: </span>
+              <span>Owner ({task.creator?.name || "Mayank Parmar"}) shared this task to </span>
+              <strong className="text-[#4F46E5] dark:text-indigo-400 font-bold">
+                {task.assignee?.user ? (task.assignee.user.name || task.assignee.user.email) : "Unassigned"}
+              </strong>.
+              <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                You can review all details and subtasks, but editing is locked to the owner and direct assignee.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Title input */}
         <div>
           <label htmlFor="task-title" className="sr-only">
@@ -358,10 +395,13 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={handleTitleBlur}
-            disabled={isPending}
+            disabled={isOtherPerson || !isOwner || isPending}
+            readOnly={isOtherPerson || !isOwner}
             className={cn(
-              "w-full text-xl font-bold tracking-tight text-slate-900 dark:text-white bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-[#4F46E5] focus:outline-hidden pb-1 transition-colors",
-              isCompleted && "line-through text-slate-400 dark:text-slate-500"
+              "w-full text-xl font-bold tracking-tight text-slate-900 dark:text-white bg-transparent border-b border-transparent focus:outline-hidden pb-1 transition-colors",
+              !isOtherPerson && isOwner && "hover:border-slate-300 dark:hover:border-slate-700 focus:border-[#4F46E5]",
+              isCompleted && "line-through text-slate-400 dark:text-slate-500",
+              (isOtherPerson || !isOwner) && "cursor-default select-text"
             )}
             placeholder="Task title..."
           />
@@ -423,8 +463,11 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               onChange={(e) => {
                 handleStatusChange(e.target.value as TaskStatus);
               }}
-              disabled={isPending}
-              className="w-full h-9 px-2.5 text-xs font-semibold rounded-lg bg-surface border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5] cursor-pointer"
+              disabled={isOtherPerson || isPending}
+              className={cn(
+                "w-full h-9 px-2.5 text-xs font-semibold rounded-lg bg-surface border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5]",
+                isOtherPerson ? "cursor-not-allowed opacity-80" : "cursor-pointer"
+              )}
             >
               <option value="TODO">To Do</option>
               <option value="IN_PROGRESS">In Progress</option>
@@ -533,9 +576,13 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             onBlur={handleDescriptionBlur}
-            disabled={isPending}
-            placeholder="Add notes, specifications, or details..."
-            className="w-full p-3 text-sm rounded-lg bg-surface border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5] transition-colors resize-y leading-relaxed"
+            disabled={isOtherPerson || isPending}
+            readOnly={isOtherPerson || !isOwner}
+            placeholder={isOtherPerson ? "No description provided." : "Add notes, specifications, or details..."}
+            className={cn(
+              "w-full p-3 text-sm rounded-lg bg-surface border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5] transition-colors resize-y leading-relaxed",
+              isOtherPerson && "cursor-default bg-slate-50/50 dark:bg-slate-900/50 select-text"
+            )}
           />
         </div>
 
@@ -550,7 +597,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             </div>
             {subtasks.length > 0 && (
               <div className="flex items-center gap-2">
-                {subtasks.some((s) => s.status !== "DONE" && s.status !== "CLOSED") && (
+                {!isOtherPerson && subtasks.some((s) => s.status !== "DONE" && s.status !== "CLOSED") && (
                   <button
                     type="button"
                     onClick={handleCompleteAllSubtasks}
@@ -603,10 +650,24 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (isOtherPerson) {
+                            alert(`This task is assigned to ${task.assignee?.user?.name || "another member"}. Only the direct assignee or Owner can check off subtasks.`);
+                            return;
+                          }
                           handleToggleSubtask(subtask.id, subtask.status);
                         }}
-                        className="text-slate-400 hover:text-emerald-500 transition-colors shrink-0 cursor-pointer"
-                        title={isSubDone ? "Mark as To Do" : "Mark as Done"}
+                        disabled={isOtherPerson}
+                        className={cn(
+                          "transition-colors shrink-0",
+                          isOtherPerson ? "cursor-not-allowed opacity-60" : "text-slate-400 hover:text-emerald-500 cursor-pointer"
+                        )}
+                        title={
+                          isOtherPerson
+                            ? "View-only subtask"
+                            : isSubDone
+                            ? "Mark as To Do"
+                            : "Mark as Done"
+                        }
                         aria-label={isSubDone ? "Mark subtask as To Do" : "Mark subtask as Done"}
                       >
                         {isSubDone ? (
@@ -630,46 +691,55 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       <TaskStatusBadge status={subtask.status} />
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteSubtask(subtask.id, e)}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all cursor-pointer"
-                        title="Delete subtask"
-                        aria-label="Delete subtask"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {!isOtherPerson && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteSubtask(subtask.id, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all cursor-pointer"
+                          title="Delete subtask"
+                          aria-label="Delete subtask"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
               })
             ) : (
               <p className="text-xs text-slate-400 dark:text-slate-500 py-1">
-                No subtasks yet. Add one below to break down this work.
+                No subtasks yet.
               </p>
             )}
           </div>
 
           {/* Quick add subtask form */}
-          <form onSubmit={handleAddSubtask} className="flex gap-2">
-            <input
-              type="text"
-              value={newSubtaskTitle}
-              onChange={(e) => setNewSubtaskTitle(e.target.value)}
-              placeholder="+ Add a subtask (press Enter)"
-              disabled={isAddingSubtask}
-              className="flex-1 h-9 px-3 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-surface text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5]"
-            />
-            <Button
-              type="submit"
-              size="sm"
-              variant="secondary"
-              isLoading={isAddingSubtask}
-              disabled={!newSubtaskTitle.trim() || isAddingSubtask}
-            >
-              Add
-            </Button>
-          </form>
+          {!isOtherPerson ? (
+            <form onSubmit={handleAddSubtask} className="flex gap-2">
+              <input
+                type="text"
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                placeholder="+ Add a subtask (press Enter)"
+                disabled={isAddingSubtask}
+                className="flex-1 h-9 px-3 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-surface text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#4F46E5]"
+              />
+              <Button
+                type="submit"
+                size="sm"
+                variant="secondary"
+                isLoading={isAddingSubtask}
+                disabled={!newSubtaskTitle.trim() || isAddingSubtask}
+              >
+                Add
+              </Button>
+            </form>
+          ) : (
+            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span>Owner shared to {task.assignee?.user?.name || "assignee"}. Subtask preparation is restricted to them.</span>
+            </div>
+          )}
         </div>
 
         {/* Audit info */}
@@ -703,6 +773,11 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             <Archive className="w-4 h-4" />
             Archive Task
           </button>
+        ) : isOtherPerson ? (
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <ShieldCheck className="w-4 h-4 text-[#4F46E5] shrink-0" />
+            <span>Owner shared to {task.assignee?.user?.name || "assignee"} (Read-Only)</span>
+          </div>
         ) : (
           <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />

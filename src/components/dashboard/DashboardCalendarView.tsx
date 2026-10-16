@@ -385,6 +385,13 @@ export function DashboardCalendarView({
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
+    const isOwner = currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+    const isAssignedToMe = task.assigneeId === currentMemberId;
+    if (!isOwner && !isAssignedToMe) {
+      alert(`This task was assigned to ${task.assignee?.user?.name || "another team member"} by the Owner. Other members can view details, but cannot edit or change status.`);
+      return;
+    }
+
     const newStatus: TaskStatus = task.status === "DONE" ? "TODO" : "DONE";
 
     setTasks((prev) =>
@@ -749,120 +756,7 @@ export function DashboardCalendarView({
         currentUserName={currentUserName}
       />
 
-      {/* Filter and Grouping Bar */}
-      <Card className="p-3.5 flex flex-wrap items-center justify-between gap-3 bg-surface">
-        {/* Left: Quick View Filters */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setFilterType("all")}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
-              filterType === "all"
-                ? "bg-[#4F46E5] text-white shadow-2xs"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
-            )}
-          >
-            All Tasks
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType((prev) => (prev === "my" ? "all" : "my"))}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-              filterType === "my"
-                ? "bg-[#4F46E5] text-white shadow-2xs"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
-            )}
-          >
-            <User className="w-3.5 h-3.5" />
-            My Active ({kpiStats.myActive})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType((prev) => (prev === "today" ? "all" : "today"))}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-              filterType === "today"
-                ? "bg-blue-600 text-white shadow-2xs"
-                : "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-slate-200"
-            )}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            Due Today ({kpiStats.dueToday})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType((prev) => (prev === "overdue" ? "all" : "overdue"))}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-              filterType === "overdue"
-                ? "bg-rose-600 text-white shadow-2xs"
-                : "bg-slate-100 dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-slate-200"
-            )}
-          >
-            <AlertCircle className="w-3.5 h-3.5" />
-            Overdue ({kpiStats.overdue})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType((prev) => (prev === "completed" ? "all" : "completed"))}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-              filterType === "completed"
-                ? "bg-emerald-600 text-white shadow-2xs"
-                : "bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 hover:bg-slate-200"
-            )}
-          >
-            <CheckSquare className="w-3.5 h-3.5" />
-            Completed ({kpiStats.completedThisWeek})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType("group")}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-              filterType === "group"
-                ? "bg-[#4F46E5] text-white shadow-2xs"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
-            )}
-          >
-            <Users className="w-3.5 h-3.5" />
-            Full Group Tasks
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType("social")}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-              filterType === "social"
-                ? "bg-pink-600 text-white"
-                : "bg-slate-100 dark:bg-slate-800 text-pink-600 dark:text-pink-400 hover:bg-slate-200"
-            )}
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            Social Media Posts
-          </button>
-        </div>
 
-        {/* Right: Team Member Dropdown (Mayank, Vedant, Lay, Bhumi, Rudra) */}
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-slate-400" />
-          <span className="text-xs font-semibold text-slate-500">Assignee:</span>
-          <select
-            value={selectedMemberId}
-            onChange={(e) => setSelectedMemberId(e.target.value)}
-            className="h-8 px-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-hidden"
-          >
-            <option value="all">All Candidates (5 Team Members)</option>
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.user.name || m.user.email} ({m.designation?.name || m.role})
-              </option>
-            ))}
-          </select>
-        </div>
-      </Card>
 
       {/* Main Full Big Calendar View */}
       <Card className="p-0 overflow-hidden shadow-xs border border-slate-200/90 dark:border-slate-800 bg-surface">
@@ -1414,6 +1308,8 @@ export function DashboardCalendarView({
           task={selectedTask}
           workspaceId={workspace.id}
           members={members}
+          currentUserRole={currentUserRole}
+          currentMemberId={currentMemberId}
           onClose={() => setSelectedTask(null)}
           onUpdateTask={handleUpdateTask}
           onArchiveTask={handleArchiveTask}

@@ -137,6 +137,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     targetStatus: TaskStatus,
     confirmAncestors = false
   ) => {
+    const targetTask = tasks.find((t) => t.id === taskId);
+    const isOwner = currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+    const isAssignedToMe = Boolean(targetTask?.assigneeId && targetTask.assigneeId === currentMemberId);
+    if (!isOwner && !isAssignedToMe) {
+      alert(`This task is assigned to ${targetTask?.assignee?.user?.name || "another team member"} by the Owner. Other members can view it, but cannot change its status.`);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/v1/workspaces/${workspace.id}/tasks/${taskId}`, {
         method: "PATCH",
@@ -340,6 +348,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             isExpanded={isExpanded}
             isSelected={selectedTask?.id === node.id}
             currentMemberId={currentMemberId}
+            currentUserRole={currentUserRole}
             onToggleExpand={handleToggleExpand}
             onSelectTask={setSelectedTask}
             onQuickStatusChange={handleQuickStatusChange}
@@ -593,6 +602,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
           workspaceId={workspace.id}
           members={members}
           currentUserRole={currentUserRole}
+          currentMemberId={currentMemberId}
           onClose={() => setSelectedTask(null)}
           onUpdateTask={handleUpdateTask}
           onArchiveTask={handleArchiveTask}
