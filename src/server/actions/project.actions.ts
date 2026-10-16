@@ -99,36 +99,25 @@ export async function getProjectsWithFinancials(workspaceId: string): Promise<{
 
   const enrichedProjects: ProjectWithFinancials[] = projects.map((p) => {
     const budget = p.totalBudget || 0;
-    const companyAmount = Math.round((budget * (p.companyPercent / 100)) * 100) / 100;
+    const companyPercent = 100.0;
+    const companyAmount = budget;
     const taxAmount = Math.round((budget * (p.taxPercent / 100)) * 100) / 100;
     const expenseAmount = p.expenseAmount || 0;
-    const teamPoolAmount = Math.max(0, budget - companyAmount - taxAmount - expenseAmount);
-
-    let allocatedTeamAmount = 0;
-    p.distributions.forEach((d) => {
-      allocatedTeamAmount += d.allocatedAmount;
-      if (d.status === "DISBURSED") {
-        disbursedPayouts += d.allocatedAmount;
-      } else {
-        pendingPayouts += d.allocatedAmount;
-      }
-    });
-
-    const unallocatedTeamAmount = Math.max(0, teamPoolAmount - allocatedTeamAmount);
+    const netVaultRetained = Math.max(0, budget - expenseAmount - taxAmount);
 
     totalRevenue += budget;
-    companyVault += companyAmount;
+    companyVault += netVaultRetained;
     taxReserves += taxAmount;
     totalExpenses += expenseAmount;
-    totalTeamPayouts += allocatedTeamAmount;
 
     return {
       ...p,
+      companyPercent: 100.0,
       companyAmount,
       taxAmount,
-      teamPoolAmount,
-      allocatedTeamAmount,
-      unallocatedTeamAmount,
+      teamPoolAmount: 0,
+      allocatedTeamAmount: 0,
+      unallocatedTeamAmount: 0,
     };
   });
 
@@ -139,9 +128,9 @@ export async function getProjectsWithFinancials(workspaceId: string): Promise<{
       companyVault,
       taxReserves,
       totalExpenses,
-      totalTeamPayouts,
-      disbursedPayouts,
-      pendingPayouts,
+      totalTeamPayouts: 0,
+      disbursedPayouts: 0,
+      pendingPayouts: 0,
     },
   };
 }
