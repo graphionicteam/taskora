@@ -190,7 +190,9 @@ export const InboxView: React.FC<InboxViewProps> = ({
     if (!selectedConversationId) return;
 
     let isMounted = true;
-    setLoadingMessages(true);
+    queueMicrotask(() => {
+      if (isMounted) setLoadingMessages(true);
+    });
 
     getConversationMessages(selectedConversationId)
       .then((data) => {

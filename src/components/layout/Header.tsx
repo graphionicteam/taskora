@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Bell, Plus, CheckCheck, CheckSquare, ShieldAlert, MapPin, Sparkles, X } from "lucide-react";
+import { Search, Bell, Plus, CheckCheck, CheckSquare, MapPin, Sparkles } from "lucide-react";
 import { TaskoraLogo } from "./TaskoraLogo";
 import { Button } from "@/components/ui/Button";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";

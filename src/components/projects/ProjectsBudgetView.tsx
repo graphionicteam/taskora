@@ -68,7 +68,7 @@ export const ProjectsBudgetView: React.FC<ProjectsBudgetViewProps> = ({
   members,
 }) => {
   const [projects, setProjects] = useState<ProjectWithFinancials[]>(initialProjects);
-  const [treasury, setTreasury] = useState(initialTreasury);
+  const [treasury] = useState(initialTreasury);
   const [activeTab, setActiveTab] = useState<"projects" | "ledger" | "vault">("projects");
 
   // Selected project for the Company Ledger
@@ -190,7 +190,7 @@ export const ProjectsBudgetView: React.FC<ProjectsBudgetViewProps> = ({
     }
   };
 
-  const formatCurrency = (amount: number, curr = "INR") => {
+  const formatCurrency = (amount: number, _curr = "INR") => {
     return `₹${Math.round(amount).toLocaleString("en-IN")}`;
   };
 
