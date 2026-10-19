@@ -12,6 +12,12 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Taskora — Task, Project & Team Management",
   description: "Minimal, premium, collaborative task and project management platform.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Taskora",
+  },
 };
 
 export default function RootLayout({
