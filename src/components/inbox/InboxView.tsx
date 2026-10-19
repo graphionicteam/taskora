@@ -459,7 +459,10 @@ export const InboxView: React.FC<InboxViewProps> = ({
       {activeTab === "chat" && (
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-hidden">
           {/* Conversation List Sidebar */}
-          <Card className="lg:col-span-4 p-3.5 border-slate-200 dark:border-slate-800 flex flex-col h-full min-h-0 overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
+          <Card className={cn(
+            "p-3.5 border-slate-200 dark:border-slate-800 flex flex-col h-full min-h-0 overflow-hidden bg-white dark:bg-slate-900 shadow-xs",
+            selectedConversationId ? "hidden lg:flex lg:col-span-4" : "flex lg:col-span-4"
+          )}>
             <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <span className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-indigo-600" />
@@ -544,15 +547,28 @@ export const InboxView: React.FC<InboxViewProps> = ({
           </Card>
 
           {/* Active Chat Canvas */}
-          <Card className="lg:col-span-8 p-0 border-slate-200 dark:border-slate-800 flex flex-col h-full min-h-0 overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
+          <Card className={cn(
+            "p-0 border-slate-200 dark:border-slate-800 flex flex-col h-full min-h-0 overflow-hidden bg-white dark:bg-slate-900 shadow-xs",
+            selectedConversationId ? "flex lg:col-span-8" : "hidden lg:flex lg:col-span-8"
+          )}>
             {activeConversation ? (
               <>
                 {/* Chat Top Header (shrink-0) */}
-                <div className="p-3 px-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70 shrink-0">
-                  <div className="flex items-center gap-3">
+                <div className="p-3 px-3 sm:px-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70 shrink-0">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedConversationId("")}
+                      className="lg:hidden p-1.5 -ml-1 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors shrink-0"
+                      title="Back to conversations"
+                      aria-label="Back to conversations"
+                    >
+                      <ChevronRight className="w-5 h-5 rotate-180" />
+                    </button>
+
                     <div
                       className={cn(
-                        "w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-xs",
+                        "w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-xs",
                         activeConversation.isGroup
                           ? "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300"
                           : "bg-indigo-100 dark:bg-indigo-950/80 text-[#4F46E5] dark:text-indigo-300"
@@ -564,9 +580,9 @@ export const InboxView: React.FC<InboxViewProps> = ({
                         (getOtherParticipantNames(activeConversation) || "CH").slice(0, 2).toUpperCase()
                       )}
                     </div>
-                    <div>
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                        {getOtherParticipantNames(activeConversation)}
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-2 truncate">
+                        <span className="truncate">{getOtherParticipantNames(activeConversation)}</span>
                         {activeConversation.isGroup ? (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">
                             {activeConversation.participants?.length || 0} Members

@@ -396,12 +396,12 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
       </div>
 
       {/* Quick Navigation Panel Tabs (Direct Go & Filter) */}
-      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-100/80 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800">
+      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100/80 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-x-auto no-scrollbar scroll-smooth">
         <button
           type="button"
           onClick={() => setQuickTab("all")}
           className={cn(
-            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
             quickTab === "all"
               ? "bg-white dark:bg-slate-800 text-[#4F46E5] dark:text-indigo-400 shadow-2xs ring-1 ring-slate-200 dark:ring-slate-700"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -417,7 +417,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
           type="button"
           onClick={() => setQuickTab("my")}
           className={cn(
-            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
             quickTab === "my"
               ? "bg-white dark:bg-slate-800 text-[#4F46E5] dark:text-indigo-400 shadow-2xs ring-1 ring-slate-200 dark:ring-slate-700"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -433,7 +433,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
           type="button"
           onClick={() => setQuickTab("today")}
           className={cn(
-            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
             quickTab === "today"
               ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-2xs ring-1 ring-slate-200 dark:ring-slate-700"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -449,7 +449,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
           type="button"
           onClick={() => setQuickTab("in_progress")}
           className={cn(
-            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
             quickTab === "in_progress"
               ? "bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-2xs ring-1 ring-slate-200 dark:ring-slate-700"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -465,13 +465,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
           type="button"
           onClick={() => setQuickTab("completed")}
           className={cn(
-            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
             quickTab === "completed"
               ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-2xs ring-1 ring-slate-200 dark:ring-slate-700"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
           )}
         >
-          <span>Completed Tasks</span>
+          <span>Completed</span>
           <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold">
             {tabCounts.completed}
           </span>
@@ -481,7 +481,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
           type="button"
           onClick={() => setQuickTab("owner")}
           className={cn(
-            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+            "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
             quickTab === "owner"
               ? "bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 shadow-2xs ring-1 ring-amber-300 dark:ring-amber-700"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -495,9 +495,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 rounded-xl bg-surface border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-surface border border-slate-200/90 dark:border-slate-800 shadow-2xs">
         {/* Search */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 min-w-0 max-w-full sm:max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
@@ -509,17 +509,17 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {/* Status filter */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+          <div className="flex items-center gap-1 text-xs text-slate-500 shrink-0">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-8 px-2.5 text-xs font-medium rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-hidden"
+              className="h-8 px-2 text-xs font-medium rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-hidden"
             >
               <option value="ALL">All Statuses</option>
-              <option value="ACTIVE">Active (To Do, In Progress, In Review)</option>
+              <option value="ACTIVE">Active (To Do, In Progress, Review)</option>
               <option value="TODO">To Do</option>
               <option value="IN_PROGRESS">In Progress</option>
               <option value="IN_REVIEW">In Review</option>
@@ -529,11 +529,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
           </div>
 
           {/* Priority filter */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+          <div className="flex items-center gap-1 text-xs text-slate-500 shrink-0">
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="h-8 px-2.5 text-xs font-medium rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-hidden"
+              className="h-8 px-2 text-xs font-medium rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-hidden"
             >
               <option value="ALL">All Priorities</option>
               <option value="URGENT">Urgent</option>
@@ -556,10 +556,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
 
       {/* Task Table Container */}
       <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-surface shadow-2xs overflow-hidden">
-        {/* Table Header: 44px height pixel-perfect aligned with TaskRow */}
+        {/* Table Header: Adaptive for Mobile / Tablet / Desktop */}
         <div className="flex items-center justify-between h-11 px-3 sm:px-4 bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider select-none">
           <div className="flex items-center gap-2 flex-1 min-w-0 mr-3">
-            <span>Task Title & Subtasks</span>
+            <span>Tasks ({filteredTree.length})</span>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">

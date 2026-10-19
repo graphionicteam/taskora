@@ -324,10 +324,18 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   const isCompleted = task.status === "DONE" || task.status === "CLOSED";
 
   return (
-    <aside
-      className="fixed inset-y-0 right-0 z-40 w-full sm:w-[520px] bg-surface border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200"
-      aria-label="Task Details Panel"
-    >
+    <div className="fixed inset-0 z-40" aria-modal="true" role="dialog">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <aside
+        className="fixed inset-y-0 right-0 z-50 w-full sm:w-[520px] max-w-full bg-surface border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200"
+        aria-label="Task Details Panel"
+      >
       {/* Header bar */}
       <div className="h-16 px-6 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2 min-w-0">
@@ -795,5 +803,6 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         </Button>
       </div>
     </aside>
+    </div>
   );
 };

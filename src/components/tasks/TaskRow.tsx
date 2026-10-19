@@ -216,42 +216,68 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           )}
         </button>
 
-        {/* Task Title */}
-        <span
-          className={cn(
-            "text-sm font-medium truncate transition-colors",
-            isCompleted
-              ? "line-through text-slate-400 dark:text-slate-500"
-              : "text-slate-900 dark:text-slate-100"
-          )}
-        >
-          {task.title}
-        </span>
-
-        {/* Personalized Owner Assignment Highlight (Only for this assignee) */}
-        {isAssignedByOwnerToMe && (
-          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-700/80 shrink-0 shadow-2xs animate-pulse">
-            <span>⭐ Assigned to You by Mayank Parmar</span>
-          </span>
-        )}
-
-        {/* Other Person View-Only Attribution Tag */}
-        {!isOwner && !isAssignedToMe && task.assignee?.user && (
-          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 shrink-0 border border-slate-200 dark:border-slate-700">
-            <span>👁️ Owner shared to {task.assignee.user.name?.split(" ")[0] || "member"}</span>
-          </span>
-        )}
-
-        {/* Subtask leaf progress badge if parent */}
-        {hasChildren && task.leafProgress && (
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
-            <span>
-              {task.leafProgress.completedLeaves}/{task.leafProgress.totalLeaves}
+        {/* Task Title & Mobile Metadata */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "text-sm font-medium truncate transition-colors",
+                isCompleted
+                  ? "line-through text-slate-400 dark:text-slate-500"
+                  : "text-slate-900 dark:text-slate-100"
+              )}
+            >
+              {task.title}
             </span>
-            <span className="text-slate-400">•</span>
-            <span>{task.leafProgress.percentage}%</span>
-          </span>
-        )}
+
+            {/* Personalized Owner Assignment Highlight (Only for this assignee on desktop/tablet) */}
+            {isAssignedByOwnerToMe && (
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-700/80 shrink-0 shadow-2xs animate-pulse">
+                <span>⭐ Assigned to You by Mayank Parmar</span>
+              </span>
+            )}
+
+            {/* Other Person View-Only Attribution Tag (desktop/tablet) */}
+            {!isOwner && !isAssignedToMe && task.assignee?.user && (
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 shrink-0 border border-slate-200 dark:border-slate-700">
+                <span>👁️ Owner shared to {task.assignee.user.name?.split(" ")[0] || "member"}</span>
+              </span>
+            )}
+
+            {/* Subtask leaf progress badge if parent (desktop/tablet) */}
+            {hasChildren && task.leafProgress && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+                <span>
+                  {task.leafProgress.completedLeaves}/{task.leafProgress.totalLeaves}
+                </span>
+                <span className="text-slate-400">•</span>
+                <span>{task.leafProgress.percentage}%</span>
+              </span>
+            )}
+          </div>
+
+          {/* Mobile Metadata Badges (Visible on screens <640px) */}
+          <div className="flex sm:hidden items-center flex-wrap gap-1.5 mt-1 text-[10px]">
+            <TaskStatusBadge status={task.status} />
+            <TaskPriorityBadge priority={task.priority} />
+            {isAssignedByOwnerToMe && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-200">
+                ⭐ Mayank
+              </span>
+            )}
+            {formattedDueDate && (
+              <span className={cn("inline-flex items-center gap-1 font-medium", isOverdue ? "text-rose-600 dark:text-rose-400 font-bold" : "text-slate-400")}>
+                <Clock className="w-2.5 h-2.5" />
+                {formattedDueDate}
+              </span>
+            )}
+            {hasChildren && task.leafProgress && (
+              <span className="text-slate-400">
+                {task.leafProgress.completedLeaves}/{task.leafProgress.totalLeaves} subtasks
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Right side: Priority, Status, Due date, Assignment Path, Assignee & Actions */}

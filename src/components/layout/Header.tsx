@@ -208,16 +208,16 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Global Search Bar */}
-          <div className="relative w-full">
+          <div className="relative flex-1 min-w-0 max-w-[280px] md:max-w-md">
             <button
               type="button"
-              className="w-full h-10 pl-9 pr-4 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
+              className="w-full h-9 md:h-10 pl-8 md:pl-9 pr-3 md:pr-4 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs md:text-sm text-slate-600 dark:text-slate-300 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
               aria-label="Search tasks, projects, members (Ctrl+K)"
             >
-              <div className="flex items-center gap-2">
-                <Search className="w-4 h-4 text-slate-400 dark:text-slate-400 absolute left-3" />
-                <span className="hidden sm:inline">Search tasks, projects...</span>
-                <span className="sm:hidden">Search...</span>
+              <div className="flex items-center gap-2 min-w-0 truncate">
+                <Search className="w-3.5 h-3.5 md:w-4 md:h-4 text-slate-400 dark:text-slate-400 absolute left-2.5 md:left-3" />
+                <span className="hidden md:inline">Search tasks, projects...</span>
+                <span className="md:hidden truncate">Search...</span>
               </div>
               <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded shadow-2xs">
                 ⌘K
@@ -227,7 +227,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Header Actions */}
-        <div className="flex items-center gap-2 sm:gap-3 ml-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-2">
           {/* Quick Create Action */}
           <Button
             size="md"
@@ -245,7 +245,7 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label="Create new task"
             className="sm:hidden p-2 rounded-lg bg-[#4F46E5] text-white cursor-pointer hover:bg-[#4338CA] transition-colors"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
           </button>
 
           {/* Notifications Dropdown */}
@@ -268,7 +268,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Notification Popover Panel */}
             {isNotificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="fixed sm:absolute right-2 sm:right-0 top-16 sm:top-auto sm:mt-2 w-[calc(100vw-16px)] sm:w-96 max-w-sm rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="p-3.5 px-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-850/50">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm text-slate-900 dark:text-white">Notifications</span>
