@@ -129,9 +129,10 @@ export async function sendPushNotificationToUser(
         notification: {
           title: payload.title,
           body: payload.body,
-          icon: "/globe.svg",
-          badge: "/globe.svg",
-          vibrate: [200, 100, 200],
+          icon: "/icon-192.png",
+          badge: "/badge-72.png",
+          vibrate: [300, 150, 300],
+          renotify: true,
         },
         fcmOptions: {
           link: payload.link || "/dashboard",

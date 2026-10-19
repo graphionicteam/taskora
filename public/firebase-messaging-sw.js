@@ -11,47 +11,45 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(clients.claim());
 });
 
-// Retrieve dynamic Firebase config passed via service worker URL query parameters or project defaults
-const urlParams = new URLSearchParams(location.search);
-const apiKey = urlParams.get("apiKey") || "AIzaSyDPMAqbXB-VwXEX1zIOkAkgV-W0R5yadjs";
-const projectId = urlParams.get("projectId") || "taskora-app-2aaaa";
-const messagingSenderId = urlParams.get("messagingSenderId") || "263023964191";
-const appId = urlParams.get("appId") || "1:263023964191:web:a76210f266bcf69951a52a";
+// Firebase config defaults
+const apiKey = "AIzaSyDPMAqbXB-VwXEX1zIOkAkgV-W0R5yadjs";
+const projectId = "taskora-app-2aaaa";
+const messagingSenderId = "263023964191";
+const appId = "1:263023964191:web:a76210f266bcf69951a52a";
 
-if (projectId) {
-  try {
-    firebase.initializeApp({
-      apiKey: apiKey || "",
-      authDomain: `${projectId}.firebaseapp.com`,
-      projectId: projectId,
-      storageBucket: `${projectId}.appspot.com`,
-      messagingSenderId: messagingSenderId || "",
-      appId: appId || "",
-    });
+try {
+  firebase.initializeApp({
+    apiKey: apiKey,
+    authDomain: `${projectId}.firebaseapp.com`,
+    projectId: projectId,
+    storageBucket: `${projectId}.appspot.com`,
+    messagingSenderId: messagingSenderId,
+    appId: appId,
+  });
 
-    const messaging = firebase.messaging();
+  const messaging = firebase.messaging();
 
-    messaging.onBackgroundMessage((payload) => {
-      const notificationTitle = payload.notification?.title || payload.data?.title || "Taskora Alert";
-      const notificationOptions = {
-        body: payload.notification?.body || payload.data?.body || "You have a new update in Taskora.",
-        icon: "/globe.svg",
-        badge: "/globe.svg",
-        tag: payload.data?.tag || "taskora-notification",
-        vibrate: [200, 100, 200],
-        data: {
-          url: payload.data?.link || payload.fcmOptions?.link || "/dashboard",
-        },
-      };
+  messaging.onBackgroundMessage((payload) => {
+    const notificationTitle = payload.notification?.title || payload.data?.title || "Taskora Alert";
+    const notificationOptions = {
+      body: payload.notification?.body || payload.data?.body || "You have a new update in Taskora.",
+      icon: "/icon-192.png",
+      badge: "/badge-72.png",
+      tag: payload.data?.tag || "taskora-notification-" + Date.now(),
+      renotify: true,
+      vibrate: [300, 150, 300],
+      data: {
+        url: payload.data?.link || payload.fcmOptions?.link || "/dashboard",
+      },
+    };
 
-      return self.registration.showNotification(notificationTitle, notificationOptions);
-    });
-  } catch (err) {
-    console.warn("FCM background initialization:", err);
-  }
+    return self.registration.showNotification(notificationTitle, notificationOptions);
+  });
+} catch (err) {
+  console.warn("FCM background messaging init warning:", err);
 }
 
-// Fallback push event handler for Web Push payloads
+// Push event handler for direct Web Push payloads
 self.addEventListener("push", (event) => {
   if (!event.data) return;
   try {
@@ -59,10 +57,11 @@ self.addEventListener("push", (event) => {
     const title = data.notification?.title || data.title || "Taskora Notification";
     const options = {
       body: data.notification?.body || data.body || "New update in Taskora",
-      icon: "/globe.svg",
-      badge: "/globe.svg",
-      tag: data.tag || "taskora-notification",
-      vibrate: [200, 100, 200],
+      icon: "/icon-192.png",
+      badge: "/badge-72.png",
+      tag: data.tag || "taskora-notification-" + Date.now(),
+      renotify: true,
+      vibrate: [300, 150, 300],
       data: {
         url: data.link || data.data?.link || "/dashboard",
       },
@@ -73,8 +72,11 @@ self.addEventListener("push", (event) => {
     event.waitUntil(
       self.registration.showNotification("Taskora Alert", {
         body: text,
-        icon: "/globe.svg",
-        badge: "/globe.svg",
+        icon: "/icon-192.png",
+        badge: "/badge-72.png",
+        tag: "taskora-alert-" + Date.now(),
+        renotify: true,
+        vibrate: [300, 150, 300],
         data: { url: "/dashboard" },
       })
     );

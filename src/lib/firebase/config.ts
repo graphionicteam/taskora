@@ -59,38 +59,81 @@ export const requestPushPermissionAndGetToken = async (): Promise<{
   error?: string;
   status: "granted" | "denied" | "default" | "unsupported";
 }> => {
-  if (typeof window === "undefined" || !("Notification" in window)) {
+  if (typeof window === "undefined") {
+    return { token: null, status: "unsupported", error: "Window undefined" };
+  }
+
+  // Detect iOS Safari outside of standalone PWA mode
+  const isIos =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+    !(window as unknown as { MSStream?: unknown }).MSStream;
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+
+  if (isIos && !isStandalone && !("Notification" in window)) {
+    return {
+      token: null,
+      status: "unsupported",
+      error:
+        "On iPhone, Apple requires you to add Taskora to your Home Screen first. Tap Safari's Share button (⎋), tap 'Add to Home Screen' (➕), then open Taskora from your Home Screen to enable lock-screen notifications.",
+    };
+  }
+
+  if (!("Notification" in window)) {
     return { token: null, status: "unsupported", error: "Notifications not supported on this browser" };
   }
 
-  const supported = await isSupported();
-  if (!supported) {
-    return { token: null, status: "unsupported", error: "Firebase messaging is not supported in this browser" };
-  }
-
-  // Check notification permission
+  // 1. Request OS permission
   const permission = await Notification.requestPermission();
   if (permission !== "granted") {
     return { token: null, status: permission, error: "Notification permission was not granted" };
   }
 
+  // 2. Register standard Service Worker without query strings
+  let registration: ServiceWorkerRegistration;
+  try {
+    registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+    await navigator.serviceWorker.ready;
+  } catch (swErr) {
+    console.error("Service Worker registration error:", swErr);
+    return {
+      token: null,
+      status: "granted",
+      error: "Service Worker error: " + (swErr instanceof Error ? swErr.message : String(swErr)),
+    };
+  }
+
+  // 3. Immediately display a native phone notification to verify lock screen & banner capability!
+  try {
+    await registration.showNotification(
+      "🔔 Taskora Notifications Active",
+      {
+        body: "You will now receive instant phone alerts for tasks and team chats!",
+        icon: "/icon-192.png",
+        badge: "/badge-72.png",
+        tag: "taskora-welcome-alert",
+        vibrate: [300, 150, 300],
+        renotify: true,
+        data: { url: "/dashboard" },
+      } as unknown as NotificationOptions
+    );
+  } catch (notifErr) {
+    console.warn("Direct notification display notice:", notifErr);
+  }
+
+  // 4. Connect to Firebase Cloud Messaging (FCM)
   const app = initFirebaseApp();
   if (!app) {
     return {
       token: null,
       status: "granted",
-      error: "Firebase project config is not yet configured. Please provide Firebase environment variables.",
+      error: "Firebase project config is not yet initialized.",
     };
   }
 
   try {
     const config = getFirebaseConfig();
-
-    // Register service worker with dynamic query params for background handler
-    const swUrl = `/firebase-messaging-sw.js?apiKey=${encodeURIComponent(config.apiKey || "")}&projectId=${encodeURIComponent(config.projectId || "")}&messagingSenderId=${encodeURIComponent(config.messagingSenderId || "")}&appId=${encodeURIComponent(config.appId || "")}`;
-    const registration = await navigator.serviceWorker.register(swUrl, { scope: "/" });
-    await navigator.serviceWorker.ready;
-
     const messaging = getMessaging(app);
     const currentToken = await getToken(messaging, {
       serviceWorkerRegistration: registration,
@@ -98,20 +141,20 @@ export const requestPushPermissionAndGetToken = async (): Promise<{
     });
 
     if (currentToken) {
-      // Save token to backend
+      // Save token to database
       await fetch("/api/v1/notifications/push-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token: currentToken,
-          platform: /iPad|iPhone|iPod/.test(navigator.userAgent) ? "ios" : /Android/.test(navigator.userAgent) ? "android" : "web",
+          platform: isIos ? "ios" : /Android/.test(navigator.userAgent) ? "android" : "web",
           userAgent: navigator.userAgent,
         }),
       });
 
       return { token: currentToken, status: "granted" };
     } else {
-      return { token: null, status: "granted", error: "No registration token available. Request permission to generate one." };
+      return { token: null, status: "granted", error: "No registration token returned from Firebase." };
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to obtain push token";

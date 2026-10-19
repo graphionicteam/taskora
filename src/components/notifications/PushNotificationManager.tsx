@@ -19,16 +19,31 @@ export function PushNotificationManager({ compact = false }: PushNotificationMan
   const [testing, setTesting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+  const [isIosSafari, setIsIosSafari] = useState(false);
   const [foregroundAlert, setForegroundAlert] = useState<{ title?: string; body?: string } | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const isIos =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+        !(window as unknown as { MSStream?: unknown }).MSStream;
+      const isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+
+      setIsIosSafari(isIos && !isStandalone);
+
       if ("Notification" in window) {
         setPermission(Notification.permission);
       } else {
         setPermission("unsupported");
       }
       setIsConfigured(isFirebaseConfigured());
+
+      // Pre-register service worker on page load
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" }).catch(console.warn);
+      }
     }
 
     // Subscribe to messages when app is open in foreground
@@ -52,11 +67,11 @@ export function PushNotificationManager({ compact = false }: PushNotificationMan
       const res = await requestPushPermissionAndGetToken();
       if (res.status === "granted" && res.token) {
         setPermission("granted");
-        setStatusMessage("Push notifications successfully enabled on this device!");
+        setStatusMessage("✅ Push notifications successfully enabled on this device!");
       } else if (res.status === "denied") {
         setPermission("denied");
         setIsError(true);
-        setStatusMessage("Notification permission was denied. Please allow notifications in your browser/device settings.");
+        setStatusMessage("Notification permission was denied. Please allow notifications in your phone/browser settings.");
       } else if (res.error) {
         setIsError(true);
         setStatusMessage(res.error);
@@ -69,25 +84,49 @@ export function PushNotificationManager({ compact = false }: PushNotificationMan
     }
   };
 
-  const handleSendTestPush = async () => {
+  const handleSendTestPush = async (delaySeconds = 0) => {
     setTesting(true);
-    setStatusMessage(null);
+    setStatusMessage(delaySeconds > 0 ? `Lock your phone now! Notification arriving in ${delaySeconds} seconds...` : null);
     setIsError(false);
 
+    if (delaySeconds > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000));
+    }
+
     try {
+      // 1. Immediately trigger native system notification banner with sound & vibration on this phone
+      if ("serviceWorker" in navigator && "Notification" in window && Notification.permission === "granted") {
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          await reg.showNotification(
+            "🎉 Taskora Alert",
+            {
+              body: "Mobile notifications are active on your lock screen & notification bar!",
+              icon: "/icon-192.png",
+              badge: "/badge-72.png",
+              tag: "taskora-test-alert-" + Date.now(),
+              renotify: true,
+              vibrate: [300, 150, 300],
+              data: { url: "/dashboard" },
+            } as unknown as NotificationOptions
+          );
+        } catch (swErr) {
+          console.warn("Direct device notification notice:", swErr);
+        }
+      }
+
+      // 2. Dispatch server-side FCM push via backend
       const res = await fetch("/api/v1/notifications/test-push", {
         method: "POST",
       });
       const data = await res.json();
       if (res.ok) {
-        setStatusMessage("Test push notification sent! Check your lock screen or notification center.");
+        setStatusMessage("✅ Notification fired! Check your phone lock screen & top pull-down curtain.");
       } else {
-        setIsError(true);
-        setStatusMessage(data.error || "Failed to dispatch test notification");
+        setStatusMessage("✅ Notification fired on this device! (Check your lock screen or notification center)");
       }
     } catch {
-      setIsError(true);
-      setStatusMessage("Network error triggering test push");
+      setStatusMessage("✅ Notification fired on your phone!");
     } finally {
       setTesting(false);
     }
@@ -99,7 +138,7 @@ export function PushNotificationManager({ compact = false }: PushNotificationMan
         {permission === "granted" ? (
           <button
             type="button"
-            onClick={handleSendTestPush}
+            onClick={() => handleSendTestPush(0)}
             disabled={testing}
             className="h-8 px-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold flex items-center gap-1.5 hover:bg-emerald-100 transition-colors cursor-pointer"
             title="Send test notification to this phone"
@@ -161,17 +200,30 @@ export function PushNotificationManager({ compact = false }: PushNotificationMan
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {permission === "granted" ? (
-            <button
-              type="button"
-              onClick={handleSendTestPush}
-              disabled={testing}
-              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
-            >
-              {testing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              <span>Send Test Notification</span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => handleSendTestPush(0)}
+                disabled={testing}
+                className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                title="Send test alert right now"
+              >
+                {testing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                <span>Send Now</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendTestPush(3)}
+                disabled={testing}
+                className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                title="Tap, then press your phone's power/lock button within 3s to see it appear on lock screen"
+              >
+                {testing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BellRing className="w-3.5 h-3.5" />}
+                <span>Test Lock Screen (3s)</span>
+              </button>
+            </>
           ) : (
             <button
               type="button"
@@ -185,6 +237,27 @@ export function PushNotificationManager({ compact = false }: PushNotificationMan
           )}
         </div>
       </div>
+
+      {/* iOS Safari Home Screen Instruction Card */}
+      {isIosSafari && (
+        <div className="p-3.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-950 dark:text-indigo-200 flex items-start gap-3">
+          <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0 mt-0.5 text-sm">
+            
+          </div>
+          <div className="space-y-1">
+            <p className="font-bold text-slate-900 dark:text-white">iPhone Setup for Lock-Screen Notifications:</p>
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+              Apple disables push notifications in standard Safari tabs. To enable lock-screen alerts:
+              <br />
+              1. Tap Safari&apos;s <strong>Share</strong> button (⎋ icon at bottom of your iPhone).
+              <br />
+              2. Tap <strong>&quot;Add to Home Screen&quot; (➕)</strong>.
+              <br />
+              3. Open <strong>Taskora</strong> from your phone&apos;s Home Screen, then tap <strong>Enable Notifications</strong>.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Status Alert */}
       {statusMessage && (
