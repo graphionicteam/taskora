@@ -1,21 +1,28 @@
 {
+  "id": "/",
   "name": "Taskora",
   "short_name": "Taskora",
   "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "orientation": "portrait-primary",
   "background_color": "#0B0F19",
   "theme_color": "#4F46E5",
   "description": "Taskora — High-Performance Productivity & Operations Platform",
+  "categories": ["productivity", "business"],
   "icons": [
     {
       "src": "/globe.svg",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
       "src": "/globe.svg",
       "sizes": "512x512",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

@@ -25,6 +25,7 @@ model User {
   invitationsSent WorkspaceInvitation[]
   createdTasks    Task[]                @relation("TaskCreator")
   closedTasks     Task[]                @relation("TaskClosedBy")
+  devicePushTokens DevicePushToken[]
 
   @@map("users")
 }
@@ -381,5 +382,17 @@ model TaskAssignment {
   @@map("task_assignments")
 }
 
+model DevicePushToken {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  token      String   @unique
+  platform   String   @default("web") // "ios", "android", "web"
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@map("device_push_tokens")
+}

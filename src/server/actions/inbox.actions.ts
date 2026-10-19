@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getActiveWorkspaceContext, getWorkspaceActiveMembers } from "@/lib/workspace";
 import { revalidatePath } from "next/cache";
+import { sendPushNotificationToUser } from "@/lib/firebase/admin";
 
 /**
  * Finds the workspace owner member (e.g., Mayank Parmar).
@@ -42,7 +43,7 @@ export async function createNotification(data: {
   content: string;
   link?: string;
 }) {
-  return db.notification.create({
+  const notif = await db.notification.create({
     data: {
       workspaceId: data.workspaceId,
       recipientId: data.recipientId,
@@ -52,7 +53,27 @@ export async function createNotification(data: {
       content: data.content,
       link: data.link || "/inbox",
     },
+    include: {
+      recipient: {
+        select: { userId: true },
+      },
+    },
   });
+
+  // Automatically dispatch live push notification to user's registered phone / browser
+  if (notif.recipient?.userId) {
+    sendPushNotificationToUser(notif.recipient.userId, {
+      title: data.title,
+      body: data.content,
+      link: data.link || "/dashboard",
+      data: {
+        type: data.type,
+        workspaceId: data.workspaceId,
+      },
+    }).catch((err) => console.warn("[FCM dispatch notice]:", err));
+  }
+
+  return notif;
 }
 
 /**

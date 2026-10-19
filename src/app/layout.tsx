@@ -32,6 +32,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -41,6 +43,7 @@ export default function RootLayout({
     <html lang="en" className={`${plusJakartaSans.variable} h-full`}>
       <body className="min-h-full flex flex-col font-sans bg-background text-foreground antialiased">
         {children}
+        <PwaInstallPrompt />
       </body>
     </html>
   );

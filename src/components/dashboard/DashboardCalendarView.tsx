@@ -25,6 +25,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import { StickyNotesWidget } from "./StickyNotesWidget";
+import { PushNotificationManager } from "@/components/notifications/PushNotificationManager";
 import { TaskStatus, TaskPriority } from "@prisma/client";
 import { TaskItemData } from "@/components/tasks/TaskRow";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
@@ -758,6 +759,9 @@ export function DashboardCalendarView({
           </div>
         </Card>
       </div>
+
+      {/* Mobile Push Notification Setup & Test Dispatcher */}
+      <PushNotificationManager />
 
       {/* Personal Sticky Notes & Tomorrow Tasks Scratchpad */}
       <StickyNotesWidget
