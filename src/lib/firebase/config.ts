@@ -14,13 +14,13 @@ export interface FirebaseClientConfig {
 }
 
 export const getFirebaseConfig = (): FirebaseClientConfig => ({
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDPMAqbXB-VwXEX1zIOkAkgV-W0R5yadjs",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "taskora-app-2aaaa.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "taskora-app-2aaaa",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "taskora-app-2aaaa.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "263023964191",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:263023964191:web:a76210f266bcf69951a52a",
+  vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || "BH7LKC8vqKcap4z6bFXIEN41hC9IfB38ZtEtBiJb-UUXmtH6cFHTzukdJfhxEAJs8iPD0nnIfrsyn1NPoKpzofE",
 });
 
 export const isFirebaseConfigured = (): boolean => {

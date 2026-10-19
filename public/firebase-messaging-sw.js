@@ -11,12 +11,12 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(clients.claim());
 });
 
-// Retrieve dynamic Firebase config passed via service worker URL query parameters
+// Retrieve dynamic Firebase config passed via service worker URL query parameters or project defaults
 const urlParams = new URLSearchParams(location.search);
-const apiKey = urlParams.get("apiKey");
-const projectId = urlParams.get("projectId");
-const messagingSenderId = urlParams.get("messagingSenderId");
-const appId = urlParams.get("appId");
+const apiKey = urlParams.get("apiKey") || "AIzaSyDPMAqbXB-VwXEX1zIOkAkgV-W0R5yadjs";
+const projectId = urlParams.get("projectId") || "taskora-app-2aaaa";
+const messagingSenderId = urlParams.get("messagingSenderId") || "263023964191";
+const appId = urlParams.get("appId") || "1:263023964191:web:a76210f266bcf69951a52a";
 
 if (projectId) {
   try {
