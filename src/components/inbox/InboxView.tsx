@@ -387,7 +387,7 @@ export const InboxView: React.FC<InboxViewProps> = ({
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-110px)] min-h-[540px] space-y-3 pb-1">
+    <div className="flex flex-col h-[calc(100dvh-175px)] md:h-[calc(100dvh-120px)] min-h-[480px] space-y-2.5 sm:space-y-3 pb-2 sm:pb-1">
       {/* Sleek, Compact Top Bar */}
       <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 py-1">
         <div>
@@ -699,12 +699,10 @@ export const InboxView: React.FC<InboxViewProps> = ({
                 {/* Message Input Bar (shrink-0, sticky at bottom, ALWAYS VISIBLE) */}
                 <form
                   onSubmit={handleSendMessage}
-                  className="p-3 px-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2 shrink-0 shadow-xs"
+                  className="p-2 sm:p-3 px-2.5 sm:px-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-1.5 sm:gap-2 shrink-0 shadow-xs"
                 >
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
                     onClick={() => {
                       const others = activeConversation.participants
                         .filter((p) => p.member.id !== currentMemberId)
@@ -713,11 +711,11 @@ export const InboxView: React.FC<InboxViewProps> = ({
                       setShowTaskModal(true);
                     }}
                     title="Dispatch Task"
-                    className="h-10 px-3 text-xs font-semibold text-indigo-600 border-indigo-200 hover:bg-indigo-50 shrink-0"
+                    className="h-9 px-2 sm:px-3 text-xs font-semibold text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-xl flex items-center gap-1 shrink-0 transition-colors"
                   >
-                    <CheckSquare className="w-4 h-4 mr-1 text-indigo-600" />
-                    Task
-                  </Button>
+                    <CheckSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span className="hidden sm:inline">Task</span>
+                  </button>
 
                   <input
                     type="text"
@@ -729,18 +727,18 @@ export const InboxView: React.FC<InboxViewProps> = ({
                         handleSendMessage();
                       }
                     }}
-                    placeholder={`Message ${getOtherParticipantNames(activeConversation)}... (Press Enter to send)`}
-                    className="flex-1 px-4 py-2 text-xs md:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                    placeholder={`Message ${getOtherParticipantNames(activeConversation)}...`}
+                    className="flex-1 min-w-0 px-3 sm:px-4 py-2 text-xs md:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                   />
 
-                  <Button
+                  <button
                     type="submit"
                     disabled={!messageInput.trim() || sendingMessage}
-                    className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shrink-0 shadow-xs"
+                    className="h-9 px-3 sm:px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 shrink-0 rounded-xl shadow-xs transition-colors cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    Send
-                  </Button>
+                    <span className="hidden sm:inline">Send</span>
+                  </button>
                 </form>
               </>
             ) : (

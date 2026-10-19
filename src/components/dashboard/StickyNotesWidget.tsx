@@ -190,19 +190,19 @@ export const StickyNotesWidget: React.FC<StickyNotesWidgetProps> = ({
   const tomorrowCount = notes.filter((n) => n.isTomorrow && !n.isDone).length;
 
   return (
-    <div className="rounded-2xl border border-amber-200/80 dark:border-amber-900/60 bg-gradient-to-br from-amber-50/50 via-surface to-yellow-50/30 dark:from-amber-950/20 dark:via-surface dark:to-yellow-950/10 p-5 shadow-xs transition-all">
+    <div className="rounded-2xl border border-amber-200/80 dark:border-amber-900/60 bg-gradient-to-br from-amber-50/50 via-surface to-yellow-50/30 dark:from-amber-950/20 dark:via-surface dark:to-yellow-950/10 p-3.5 sm:p-5 shadow-xs transition-all">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-amber-200/60 dark:border-amber-900/40">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center font-bold shadow-2xs">
+          <div className="w-8 h-8 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center font-bold shadow-2xs shrink-0">
             <StickyNote className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <h3 className="font-bold text-sm text-slate-900 dark:text-white">
                 Personal Sticky Notes & Tomorrow Tasks
               </h3>
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
                 <Lock className="w-2.5 h-2.5" />
                 Only visible to you ({currentUserName.split(" ")[0] || "You"})
               </span>
@@ -213,14 +213,14 @@ export const StickyNotesWidget: React.FC<StickyNotesWidgetProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between sm:justify-end gap-2">
           {/* Filter pills */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200/70 dark:border-slate-700/70">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200/70 dark:border-slate-700/70 overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={() => setFilter("all")}
               className={cn(
-                "px-2.5 py-1 text-2xs font-semibold rounded-md transition-all cursor-pointer",
+                "px-2.5 py-1 text-2xs font-semibold rounded-md transition-all cursor-pointer shrink-0",
                 filter === "all"
                   ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs"
                   : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
@@ -232,7 +232,7 @@ export const StickyNotesWidget: React.FC<StickyNotesWidgetProps> = ({
               type="button"
               onClick={() => setFilter("tomorrow")}
               className={cn(
-                "px-2.5 py-1 text-2xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1",
+                "px-2.5 py-1 text-2xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1 shrink-0",
                 filter === "tomorrow"
                   ? "bg-amber-400 text-amber-950 font-bold shadow-2xs"
                   : "text-amber-700 dark:text-amber-400 hover:bg-amber-100/60 dark:hover:bg-amber-950/40"
@@ -245,7 +245,7 @@ export const StickyNotesWidget: React.FC<StickyNotesWidgetProps> = ({
               type="button"
               onClick={() => setFilter("active")}
               className={cn(
-                "px-2.5 py-1 text-2xs font-semibold rounded-md transition-all cursor-pointer",
+                "px-2.5 py-1 text-2xs font-semibold rounded-md transition-all cursor-pointer shrink-0",
                 filter === "active"
                   ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs"
                   : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
@@ -258,7 +258,7 @@ export const StickyNotesWidget: React.FC<StickyNotesWidgetProps> = ({
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
             title={isExpanded ? "Collapse notes" : "Expand notes"}
           >
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -274,59 +274,61 @@ export const StickyNotesWidget: React.FC<StickyNotesWidgetProps> = ({
             onSubmit={handleAddNote}
             className="p-3 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200/70 dark:border-amber-900/50 shadow-2xs space-y-2.5"
           >
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col gap-2.5">
               <input
                 type="text"
                 value={newContent}
                 onChange={(e) => setNewContent(e.target.value)}
                 placeholder="✍️ Write a quick personal reminder or tomorrow's task..."
-                className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-surface text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-amber-400"
+                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-surface text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-amber-400"
               />
 
-              <div className="flex items-center gap-2 shrink-0">
-                {/* For Tomorrow toggle */}
-                <button
-                  type="button"
-                  onClick={() => setIsTomorrow((prev) => !prev)}
-                  className={cn(
-                    "h-8 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer",
-                    isTomorrow
-                      ? "bg-amber-400 border-amber-500 text-amber-950 shadow-2xs"
-                      : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100"
-                  )}
-                >
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>For Tomorrow</span>
-                </button>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* For Tomorrow toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsTomorrow((prev) => !prev)}
+                    className={cn(
+                      "h-8 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer shrink-0",
+                      isTomorrow
+                        ? "bg-amber-400 border-amber-500 text-amber-950 shadow-2xs"
+                        : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100"
+                    )}
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>For Tomorrow</span>
+                  </button>
 
-                {/* Color Pickers */}
-                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                  {(["yellow", "green", "pink", "blue", "purple", "orange"] as const).map(
-                    (c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setSelectedColor(c)}
-                        className={cn(
-                          "w-4 h-4 rounded-full transition-transform cursor-pointer",
-                          c === "yellow" && "bg-yellow-400",
-                          c === "green" && "bg-emerald-400",
-                          c === "pink" && "bg-pink-400",
-                          c === "blue" && "bg-sky-400",
-                          c === "purple" && "bg-purple-400",
-                          c === "orange" && "bg-orange-400",
-                          selectedColor === c && "ring-2 ring-slate-900 dark:ring-white scale-110"
-                        )}
-                        title={`Select ${c} sticky note`}
-                      />
-                    )
-                  )}
+                  {/* Color Pickers */}
+                  <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+                    {(["yellow", "green", "pink", "blue", "purple", "orange"] as const).map(
+                      (c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setSelectedColor(c)}
+                          className={cn(
+                            "w-4 h-4 rounded-full transition-transform cursor-pointer",
+                            c === "yellow" && "bg-yellow-400",
+                            c === "green" && "bg-emerald-400",
+                            c === "pink" && "bg-pink-400",
+                            c === "blue" && "bg-sky-400",
+                            c === "purple" && "bg-purple-400",
+                            c === "orange" && "bg-orange-400",
+                            selectedColor === c && "ring-2 ring-slate-900 dark:ring-white scale-110"
+                          )}
+                          title={`Select ${c} sticky note`}
+                        />
+                      )
+                    )}
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={!newContent.trim()}
-                  className="h-8 px-3 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-semibold text-xs transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                  className="h-8 px-3 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-semibold text-xs transition-colors flex items-center gap-1 cursor-pointer shadow-2xs shrink-0 ml-auto"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Note</span>

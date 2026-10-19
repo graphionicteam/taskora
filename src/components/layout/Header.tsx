@@ -188,10 +188,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="h-16 shrink-0 border-b border-slate-200/80 dark:border-slate-800 bg-surface/95 backdrop-blur-xs sticky top-0 z-20 px-4 md:px-6 flex items-center justify-between">
+      <header className="h-16 shrink-0 border-b border-slate-200/80 dark:border-slate-800 bg-surface/95 backdrop-blur-xs sticky top-0 z-20 px-3 sm:px-4 md:px-6 flex items-center justify-between w-full max-w-full overflow-hidden">
         {/* Brand & Workspace Switcher & Global Search */}
-        <div className="flex items-center gap-3 md:gap-4 flex-1 max-w-lg">
-          <div className="md:hidden">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0 max-w-lg">
+          <div className="md:hidden shrink-0">
             <Link href="/dashboard" aria-label="Taskora home">
               <TaskoraLogo collapsed={true} />
             </Link>
@@ -199,7 +199,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Workspace Switcher */}
           {activeWorkspace && (
-            <div className="shrink-0">
+            <div className="shrink-0 max-w-[130px] sm:max-w-[180px] md:max-w-[220px]">
               <WorkspaceSwitcher
                 activeWorkspace={activeWorkspace}
                 workspaces={workspaces}
@@ -207,8 +207,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          {/* Global Search Bar */}
-          <div className="relative flex-1 min-w-0 max-w-[280px] md:max-w-md">
+          {/* Global Search Bar (hidden on <sm to prevent header blowouts on mobile) */}
+          <div className="relative flex-1 min-w-0 max-w-[280px] md:max-w-md hidden sm:block">
             <button
               type="button"
               className="w-full h-9 md:h-10 pl-8 md:pl-9 pr-3 md:pr-4 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs md:text-sm text-slate-600 dark:text-slate-300 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#4F46E5]"
@@ -227,25 +227,16 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Header Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-2">
-          {/* Quick Create Action */}
-          <Button
-            size="md"
-            variant="primary"
-            onClick={() => setIsNewTaskOpen(true)}
-            className="hidden sm:inline-flex font-semibold shadow-xs"
-            aria-label="Create new task"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Task</span>
-          </Button>
+        <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-3 shrink-0 ml-1 sm:ml-2">
+          {/* Quick Create Action - Single responsive button */}
           <button
             type="button"
             onClick={() => setIsNewTaskOpen(true)}
             aria-label="Create new task"
-            className="sm:hidden p-2 rounded-lg bg-[#4F46E5] text-white cursor-pointer hover:bg-[#4338CA] transition-colors"
+            className="h-9 px-2.5 sm:px-3.5 rounded-lg bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors shrink-0"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
+            <span className="hidden md:inline">New Task</span>
           </button>
 
           {/* Notifications Dropdown */}

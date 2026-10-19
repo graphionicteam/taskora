@@ -86,7 +86,7 @@ export function WorkspaceSwitcher({
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="h-9 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 flex items-center gap-2 text-xs font-semibold shadow-2xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#4F46E5] max-w-[200px]"
+        className="h-9 px-2 sm:px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 flex items-center gap-1.5 sm:gap-2 text-xs font-semibold shadow-2xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#4F46E5] w-full min-w-0"
         aria-label="Switch active workspace"
         aria-expanded={isOpen}
       >

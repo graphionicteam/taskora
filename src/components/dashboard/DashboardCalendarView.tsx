@@ -100,6 +100,7 @@ export function DashboardCalendarView({
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [selectedTask, setSelectedTask] = useState<TaskItemData | null>(null);
+  const [selectedDateForAgenda, setSelectedDateForAgenda] = useState<Date>(new Date());
   const [filterType, setFilterType] = useState<TaskFilterType>("all");
   const [selectedMemberId, setSelectedMemberId] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
@@ -334,6 +335,14 @@ export function DashboardCalendarView({
     }
     return days;
   }, [currentDate, filteredTasks, today]);
+
+  // Agenda tasks for the selected date on mobile
+  const agendaTasks = useMemo(() => {
+    return filteredTasks.filter((t) => {
+      if (!t.dueDate) return false;
+      return isSameDay(new Date(t.dueDate), selectedDateForAgenda);
+    });
+  }, [filteredTasks, selectedDateForAgenda]);
 
   // Navigation handlers
   const handlePrev = () => {
@@ -803,199 +812,324 @@ export function DashboardCalendarView({
           </div>
         </div>
 
-        {/* MONTH VIEW: Big Spacious Calendar Grid */}
+        {/* MONTH VIEW: Responsive Grid with Mobile Agenda */}
         {viewMode === "month" && (
-          <div className="overflow-x-auto no-scrollbar">
-            <div className="min-w-[700px] md:min-w-full">
+          <div>
+            <div className="w-full">
               {/* Days of week header */}
               <div className="grid grid-cols-7 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 text-center">
                 {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => (
                   <div
                     key={day}
-                    className="py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider"
+                    className="py-1.5 sm:py-2.5 text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider"
                   >
                     <span className="hidden sm:inline">{day}</span>
-                    <span className="sm:hidden">{day.slice(0, 3)}</span>
+                    <span className="sm:hidden">{day.slice(0, 1)}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Large Day Cells Grid */}
+              {/* Day Cells Grid */}
               <div className="grid grid-cols-7 divide-x divide-y divide-slate-200/80 dark:divide-slate-800">
-              {monthDays.map((item, idx) => {
-                const dayNum = item.date.getDate();
-                const isAdding = activeAddDay && isSameDay(activeAddDay, item.date);
+                {monthDays.map((item, idx) => {
+                  const dayNum = item.date.getDate();
+                  const isAdding = activeAddDay && isSameDay(activeAddDay, item.date);
+                  const isSelectedForAgenda = isSameDay(selectedDateForAgenda, item.date);
 
-                return (
-                  <div
-                    key={idx}
-                    id={item.isToday ? "calendar-today-cell" : undefined}
-                    className={cn(
-                      "min-h-[125px] sm:min-h-[145px] p-2 flex flex-col justify-between transition-all relative group",
-                      !item.isCurrentMonth && "bg-slate-50/40 dark:bg-slate-950/30 text-slate-400",
-                      item.isCurrentMonth && "bg-surface hover:bg-slate-50/50 dark:hover:bg-slate-850/50",
-                      item.isToday && "bg-indigo-50/30 dark:bg-indigo-950/30 ring-2 ring-inset ring-[#4F46E5]",
-                      item.isToday && todayFlash && "ring-4 ring-indigo-500 scale-[1.01] shadow-lg z-10 duration-300"
-                    )}
-                  >
-                    {/* Top Row: Date Number & Add Button */}
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span
-                        className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all",
-                          item.isToday
-                            ? "bg-[#4F46E5] text-white shadow-xs"
-                            : item.isCurrentMonth
-                            ? "text-slate-700 dark:text-slate-300"
-                            : "text-slate-300 dark:text-slate-600"
-                        )}
-                      >
-                        {dayNum}
-                      </span>
+                  return (
+                    <div
+                      key={idx}
+                      id={item.isToday ? "calendar-today-cell" : undefined}
+                      onClick={() => setSelectedDateForAgenda(item.date)}
+                      className={cn(
+                        "min-h-[58px] sm:min-h-[110px] md:min-h-[145px] p-1 sm:p-2 flex flex-col justify-between transition-all relative group cursor-pointer",
+                        !item.isCurrentMonth && "bg-slate-50/40 dark:bg-slate-950/30 text-slate-400",
+                        item.isCurrentMonth && "bg-surface hover:bg-slate-50/50 dark:hover:bg-slate-850/50",
+                        item.isToday && "bg-indigo-50/30 dark:bg-indigo-950/30 ring-2 ring-inset ring-[#4F46E5]",
+                        isSelectedForAgenda && "bg-indigo-50/60 dark:bg-indigo-950/50 ring-2 ring-indigo-500 z-10",
+                        item.isToday && todayFlash && "ring-4 ring-indigo-500 scale-[1.01] shadow-lg z-10 duration-300"
+                      )}
+                    >
+                      {/* Top Row: Date Number & Add Button */}
+                      <div className="flex items-center justify-between mb-1">
+                        <span
+                          className={cn(
+                            "w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold transition-all",
+                            item.isToday
+                              ? "bg-[#4F46E5] text-white shadow-xs"
+                              : item.isCurrentMonth
+                              ? "text-slate-700 dark:text-slate-300"
+                              : "text-slate-300 dark:text-slate-600"
+                          )}
+                        >
+                          {dayNum}
+                        </span>
 
-                      {/* Quick Add Button on Hover */}
-                      <button
-                        type="button"
-                        onClick={() => setActiveAddDay(isAdding ? null : item.date)}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-[#4F46E5] hover:bg-slate-100 dark:hover:bg-slate-800 transition-opacity"
-                        title="Add task for this day"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    {/* Inline Quick Add Input if Active */}
-                    {isAdding && (
-                      <div className="mb-2 p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-2xs animate-in zoom-in-95">
-                        <input
-                          type="text"
-                          value={newDayTaskTitle}
-                          onChange={(e) => setNewDayTaskTitle(e.target.value)}
-                          placeholder="Task title..."
-                          autoFocus
-                          className="w-full h-6 px-1.5 text-xs rounded bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:outline-hidden"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleAddDayTask(item.date);
-                            if (e.key === "Escape") setActiveAddDay(null);
+                        {/* Quick Add Button on Hover (desktop) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveAddDay(isAdding ? null : item.date);
                           }}
-                        />
-                        <div className="flex items-center justify-between mt-1">
-                          <select
-                            value={newDayTaskPriority}
-                            onChange={(e) => setNewDayTaskPriority(e.target.value as TaskPriority)}
-                            className="text-[10px] bg-transparent text-slate-600 dark:text-slate-300"
-                          >
-                            <option value="LOW">Low</option>
-                            <option value="MEDIUM">Medium</option>
-                            <option value="HIGH">High</option>
-                            <option value="URGENT">Urgent</option>
-                          </select>
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleAddDayTask(item.date)}
-                              className="px-1.5 py-0.5 rounded bg-[#4F46E5] text-white text-[10px] font-semibold"
-                            >
-                              Add
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setActiveAddDay(null)}
-                              className="text-[10px] text-slate-400"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
+                          className="hidden sm:inline-flex opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-[#4F46E5] hover:bg-slate-100 dark:hover:bg-slate-800 transition-opacity"
+                          title="Add task for this day"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                    )}
 
-                    {/* Task Cards / Pills inside the Day Cell */}
-                    <div className="space-y-1 overflow-y-auto max-h-[90px] pr-0.5 scrollbar-thin">
-                      {item.tasks.slice(0, 3).map((task) => {
-                        const isDone = task.status === "DONE" || task.status === "CLOSED";
-                        const social = getSocialPlatform(task);
-                        const isAssignedByOwnerToMe =
-                          (task.creator?.name?.toLowerCase().includes("mayank") ||
-                            task.creator?.email?.toLowerCase().includes("mayank")) &&
-                          task.assigneeId === currentMemberId;
-
-                        return (
-                          <div
-                            key={task.id}
-                            onClick={() => setSelectedTask(task)}
+                      {/* Mobile Task Dot Indicators (< md screens) */}
+                      <div className="md:hidden flex items-center justify-center gap-1 mt-0.5 min-h-[12px]">
+                        {item.tasks.slice(0, 3).map((t, dotIdx) => (
+                          <span
+                            key={dotIdx}
                             className={cn(
-                              "p-1.5 rounded-lg border text-xs cursor-pointer transition-all hover:scale-[1.01] flex items-center justify-between gap-1 shadow-2xs",
-                              isAssignedByOwnerToMe
-                                ? "border-amber-400 bg-amber-50/95 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 ring-1 ring-amber-400/90 font-semibold"
-                                : social
-                                ? "bg-pink-50/80 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800 text-pink-900 dark:text-pink-200"
-                                : isDone
-                                ? "bg-slate-100/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-400 line-through"
-                                : task.priority === "URGENT"
-                                ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-200"
-                                : "bg-white dark:bg-slate-850 border-slate-200/80 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 hover:border-[#4F46E5]"
+                              "w-1.5 h-1.5 rounded-full shrink-0",
+                              t.status === "DONE" || t.status === "CLOSED"
+                                ? "bg-emerald-500"
+                                : t.priority === "URGENT"
+                                ? "bg-rose-500"
+                                : isSocialTask(t)
+                                ? "bg-pink-500"
+                                : "bg-indigo-500"
                             )}
-                          >
-                            <div className="flex items-center gap-1.5 min-w-0">
+                          />
+                        ))}
+                        {item.tasks.length > 3 && (
+                          <span className="text-[8px] font-bold text-slate-400">
+                            +{item.tasks.length - 3}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Inline Quick Add Input if Active */}
+                      {isAdding && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="hidden sm:block mb-2 p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-2xs animate-in zoom-in-95"
+                        >
+                          <input
+                            type="text"
+                            value={newDayTaskTitle}
+                            onChange={(e) => setNewDayTaskTitle(e.target.value)}
+                            placeholder="Task title..."
+                            autoFocus
+                            className="w-full h-6 px-1.5 text-xs rounded bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:outline-hidden"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleAddDayTask(item.date);
+                              if (e.key === "Escape") setActiveAddDay(null);
+                            }}
+                          />
+                          <div className="flex items-center justify-between mt-1">
+                            <select
+                              value={newDayTaskPriority}
+                              onChange={(e) => setNewDayTaskPriority(e.target.value as TaskPriority)}
+                              className="text-[10px] bg-transparent text-slate-600 dark:text-slate-300"
+                            >
+                              <option value="LOW">Low</option>
+                              <option value="MEDIUM">Medium</option>
+                              <option value="HIGH">High</option>
+                              <option value="URGENT">Urgent</option>
+                            </select>
+                            <div className="flex items-center gap-1">
                               <button
                                 type="button"
-                                onClick={(e) => handleToggleStatus(task.id, e)}
-                                className={cn(
-                                  "w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 transition-colors",
-                                  isDone
-                                    ? "bg-emerald-500 border-emerald-500 text-white"
-                                    : "border-slate-400 hover:border-[#4F46E5]"
-                                )}
+                                onClick={() => handleAddDayTask(item.date)}
+                                className="px-1.5 py-0.5 rounded bg-[#4F46E5] text-white text-[10px] font-semibold"
                               >
-                                {isDone && <Check className="w-2.5 h-2.5" />}
+                                Add
                               </button>
-
-                              <span className="truncate font-medium text-[11px] leading-tight flex items-center gap-1">
-                                {isAssignedByOwnerToMe && (
-                                  <span className="text-amber-600 dark:text-amber-400 font-bold shrink-0">⭐</span>
-                                )}
-                                <span>{task.title}</span>
-                              </span>
-                            </div>
-
-                            {/* Assignee Avatar with Assignment Traceability */}
-                            {task.assignee?.user && (
-                              <div
-                                className={cn(
-                                  "w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center shrink-0",
-                                  isAssignedByOwnerToMe
-                                    ? "bg-amber-400 text-amber-950 shadow-2xs"
-                                    : "bg-indigo-100 dark:bg-indigo-950 text-[#4F46E5]"
-                                )}
-                                title={`Assigned by ${task.creator?.name || "Mayank Parmar (Owner)"} → Assigned to ${task.assignee.user.name || task.assignee.user.email}${isAssignedByOwnerToMe ? " (You)" : ""}`}
+                              <button
+                                type="button"
+                                onClick={() => setActiveAddDay(null)}
+                                className="text-[10px] text-slate-400"
                               >
-                                {(task.assignee.user.name || task.assignee.user.email).slice(0, 1).toUpperCase()}
-                              </div>
-                            )}
+                                ✕
+                              </button>
+                            </div>
                           </div>
-                        );
-                      })}
-
-                      {/* Overflow badge if more than 3 tasks */}
-                      {item.tasks.length > 3 && (
-                        <div
-                          onClick={() => {
-                            setCurrentDate(item.date);
-                            setViewMode("day");
-                          }}
-                          className="text-[10px] font-bold text-center text-[#4F46E5] hover:underline cursor-pointer py-0.5"
-                        >
-                          +{item.tasks.length - 3} more
                         </div>
                       )}
-                    </div>
 
-                    <div />
-                  </div>
-                );
-              })}
+                      {/* Desktop Task Cards / Pills inside the Day Cell (hidden on mobile, shown on md+) */}
+                      <div className="hidden md:block space-y-1 overflow-y-auto max-h-[90px] pr-0.5 scrollbar-thin">
+                        {item.tasks.slice(0, 3).map((task) => {
+                          const isDone = task.status === "DONE" || task.status === "CLOSED";
+                          const social = getSocialPlatform(task);
+                          const isAssignedByOwnerToMe =
+                            (task.creator?.name?.toLowerCase().includes("mayank") ||
+                              task.creator?.email?.toLowerCase().includes("mayank")) &&
+                            task.assigneeId === currentMemberId;
+
+                          return (
+                            <div
+                              key={task.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedTask(task);
+                              }}
+                              className={cn(
+                                "p-1.5 rounded-lg border text-xs cursor-pointer transition-all hover:scale-[1.01] flex items-center justify-between gap-1 shadow-2xs",
+                                isAssignedByOwnerToMe
+                                  ? "border-amber-400 bg-amber-50/95 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 ring-1 ring-amber-400/90 font-semibold"
+                                  : social
+                                  ? "bg-pink-50/80 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800 text-pink-900 dark:text-pink-200"
+                                  : isDone
+                                  ? "bg-slate-100/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-400 line-through"
+                                  : task.priority === "URGENT"
+                                  ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-200"
+                                  : "bg-white dark:bg-slate-850 border-slate-200/80 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 hover:border-[#4F46E5]"
+                              )}
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleToggleStatus(task.id, e)}
+                                  className={cn(
+                                    "w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 transition-colors",
+                                    isDone
+                                      ? "bg-emerald-500 border-emerald-500 text-white"
+                                      : "border-slate-400 hover:border-[#4F46E5]"
+                                  )}
+                                >
+                                  {isDone && <Check className="w-2.5 h-2.5" />}
+                                </button>
+
+                                <span className="truncate font-medium text-[11px] leading-tight flex items-center gap-1">
+                                  {isAssignedByOwnerToMe && (
+                                    <span className="text-amber-600 dark:text-amber-400 font-bold shrink-0">⭐</span>
+                                  )}
+                                  <span>{task.title}</span>
+                                </span>
+                              </div>
+
+                              {/* Assignee Avatar with Assignment Traceability */}
+                              {task.assignee?.user && (
+                                <div
+                                  className={cn(
+                                    "w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center shrink-0",
+                                    isAssignedByOwnerToMe
+                                      ? "bg-amber-400 text-amber-950 shadow-2xs"
+                                      : "bg-indigo-100 dark:bg-indigo-950 text-[#4F46E5]"
+                                  )}
+                                  title={`Assigned by ${task.creator?.name || "Mayank Parmar (Owner)"} → Assigned to ${task.assignee.user.name || task.assignee.user.email}${isAssignedByOwnerToMe ? " (You)" : ""}`}
+                                >
+                                  {(task.assignee.user.name || task.assignee.user.email).slice(0, 1).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Overflow badge if more than 3 tasks */}
+                        {item.tasks.length > 3 && (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCurrentDate(item.date);
+                              setViewMode("day");
+                            }}
+                            className="text-[10px] font-bold text-center text-[#4F46E5] hover:underline cursor-pointer py-0.5"
+                          >
+                            +{item.tasks.length - 3} more
+                          </div>
+                        )}
+                      </div>
+
+                      <div />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+
+            {/* Mobile Selected Day Agenda Section (Exclusive mobile layout) */}
+            <div className="md:hidden border-t border-slate-200 dark:border-slate-800 p-3 sm:p-4 bg-slate-50/70 dark:bg-slate-900/70 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#4F46E5]" />
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                    {selectedDateForAgenda.toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                  {isSameDay(selectedDateForAgenda, today) && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950 text-[#4F46E5] dark:text-indigo-300">
+                      Today
+                    </span>
+                  )}
+                </div>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  {agendaTasks.length} {agendaTasks.length === 1 ? "task" : "tasks"}
+                </span>
+              </div>
+
+              {agendaTasks.length === 0 ? (
+                <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-center text-xs text-slate-400 bg-white/60 dark:bg-slate-850/60">
+                  No tasks or posts scheduled for this day. Tap any day above to view tasks.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {agendaTasks.map((task) => {
+                    const isDone = task.status === "DONE" || task.status === "CLOSED";
+                    const social = getSocialPlatform(task);
+                    const isAssignedByOwnerToMe =
+                      (task.creator?.name?.toLowerCase().includes("mayank") ||
+                        task.creator?.email?.toLowerCase().includes("mayank")) &&
+                      task.assigneeId === currentMemberId;
+
+                    return (
+                      <div
+                        key={task.id}
+                        onClick={() => setSelectedTask(task)}
+                        className={cn(
+                          "p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5 bg-white dark:bg-slate-850 shadow-2xs",
+                          isAssignedByOwnerToMe && "border-amber-400 bg-amber-50/70 dark:bg-amber-950/40 ring-1 ring-amber-400/80"
+                        )}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleStatus(task.id, e)}
+                          className={cn(
+                            "mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors",
+                            isDone ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-400 hover:border-[#4F46E5]"
+                          )}
+                        >
+                          {isDone && <Check className="w-2.5 h-2.5" />}
+                        </button>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                            {social && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 dark:bg-pink-950 text-pink-700 dark:text-pink-300">
+                                {social}
+                              </span>
+                            )}
+                            {isAssignedByOwnerToMe && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-200 dark:bg-amber-900 text-amber-950 dark:text-amber-200">
+                                ⭐ Assigned by Mayank
+                              </span>
+                            )}
+                            <TaskPriorityBadge priority={task.priority} />
+                            <TaskStatusBadge status={task.status} />
+                          </div>
+                          <p className={cn("font-medium text-xs text-slate-900 dark:text-white truncate", isDone && "line-through text-slate-400")}>
+                            {task.title}
+                          </p>
+                          {task.assignee?.user && (
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                              👤 {task.assignee.user.name || task.assignee.user.email}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
