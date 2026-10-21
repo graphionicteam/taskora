@@ -16,6 +16,7 @@ import {
   findCompletedAncestors,
 } from "@/lib/tasks";
 import { TaskStatus, TaskPriority } from "@prisma/client";
+import { notifyTaskCreated, notifyTaskUpdated } from "@/server/notifications/task-notifications";
 
 export interface ActionResult<T = unknown> {
   success?: boolean;
@@ -100,6 +101,15 @@ export async function createTaskAction(
     revalidatePath("/tasks");
     revalidatePath("/tasks/my");
     revalidatePath("/dashboard");
+
+    // Dispatch lock-screen & mobile push notifications to assignee & team
+    notifyTaskCreated({
+      workspaceId: wsContext.workspace.id,
+      taskId: task.id,
+      taskTitle: task.title,
+      assigneeId: targetAssigneeId,
+      actorUserId: session.user.id,
+    }).catch((err) => console.warn("[Push notification dispatch error]:", err));
 
     return { success: true, data: task };
   } catch (err) {
@@ -200,6 +210,29 @@ export async function updateTaskStatusAction(
     revalidatePath("/tasks");
     revalidatePath("/tasks/my");
     revalidatePath("/dashboard");
+
+    // Dispatch lock-screen & mobile push notifications to assignee, creator & team
+    notifyTaskUpdated({
+      workspaceId: wsContext.workspace.id,
+      taskId: task.id,
+      previousTask: {
+        title: task.title,
+        status: task.status,
+        priority: task.priority,
+        dueDate: task.dueDate,
+        assigneeId: task.assigneeId,
+        creatorId: task.creatorId,
+      },
+      updatedTask: {
+        title: task.title,
+        status: targetStatus,
+        priority: task.priority,
+        dueDate: task.dueDate,
+        assigneeId: task.assigneeId,
+        creatorId: task.creatorId,
+      },
+      actorUserId: session.user.id,
+    }).catch((err) => console.warn("[Push notification dispatch error]:", err));
 
     return { success: true };
   } catch (err) {

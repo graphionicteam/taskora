@@ -377,7 +377,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
             {viewMode === "my"
-              ? "Tasks assigned to you across the Graphionic workspace"
+              ? "Tasks assigned to you across the workspace"
               : `Collaborative tasks and nested hierarchy for ${workspace.name}`}
           </p>
         </div>

@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Search, Bell, Plus, CheckCheck, CheckSquare, MapPin, Sparkles } from "lucide-react";
 import { TaskoraLogo } from "./TaskoraLogo";
 import { Button } from "@/components/ui/Button";
-import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { WorkspaceRole } from "@prisma/client";
 import { NewTaskModal } from "@/components/tasks/NewTaskModal";
 
@@ -196,16 +195,6 @@ export const Header: React.FC<HeaderProps> = ({
               <TaskoraLogo collapsed={true} />
             </Link>
           </div>
-
-          {/* Workspace Switcher */}
-          {activeWorkspace && (
-            <div className="shrink-0 max-w-[130px] sm:max-w-[180px] md:max-w-[220px]">
-              <WorkspaceSwitcher
-                activeWorkspace={activeWorkspace}
-                workspaces={workspaces}
-              />
-            </div>
-          )}
 
           {/* Global Search Bar (hidden on <sm to prevent header blowouts on mobile) */}
           <div className="relative flex-1 min-w-0 max-w-[280px] md:max-w-md hidden sm:block">

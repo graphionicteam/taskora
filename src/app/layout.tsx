@@ -42,6 +42,7 @@ export const metadata: Metadata = {
 };
 
 import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
+import { PushTokenAutoSync } from "@/components/notifications/PushTokenAutoSync";
 
 export default function RootLayout({
   children,
@@ -53,6 +54,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans bg-background text-foreground antialiased">
         {children}
         <PwaInstallPrompt />
+        <PushTokenAutoSync />
       </body>
     </html>
   );

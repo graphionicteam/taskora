@@ -10,6 +10,7 @@ import {
   validateCompletionConstraints,
   findCompletedAncestors,
 } from "@/lib/tasks";
+import { notifyTaskUpdated } from "@/server/notifications/task-notifications";
 
 interface RouteParams {
   params: Promise<{ id: string; taskId: string }>;
@@ -367,6 +368,29 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       },
     });
   });
+
+  // Dispatch lock-screen & mobile push notifications to assignee, creator & team
+  notifyTaskUpdated({
+    workspaceId,
+    taskId: updatedTask.id,
+    previousTask: {
+      title: existingTask.title,
+      status: existingTask.status,
+      priority: existingTask.priority,
+      dueDate: existingTask.dueDate,
+      assigneeId: existingTask.assigneeId,
+      creatorId: existingTask.creatorId,
+    },
+    updatedTask: {
+      title: updatedTask.title,
+      status: updatedTask.status,
+      priority: updatedTask.priority,
+      dueDate: updatedTask.dueDate,
+      assigneeId: updatedTask.assigneeId,
+      creatorId: updatedTask.creatorId,
+    },
+    actorUserId: session.user.id,
+  }).catch((err) => console.warn("[Push notification dispatch error]:", err));
 
   return NextResponse.json({ data: updatedTask });
 }

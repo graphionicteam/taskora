@@ -5,6 +5,7 @@ import { canCreateTask } from "@/lib/permissions";
 import { createTaskSchema } from "@/lib/validations/task";
 import { calculateLeafProgress } from "@/lib/tasks";
 import { TaskStatus, TaskPriority, Prisma } from "@prisma/client";
+import { notifyTaskCreated } from "@/server/notifications/task-notifications";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -296,6 +297,15 @@ export async function POST(request: Request, { params }: RouteParams) {
       },
     },
   });
+
+  // Dispatch lock-screen & mobile push notifications to assignee & team
+  notifyTaskCreated({
+    workspaceId,
+    taskId: task.id,
+    taskTitle: task.title,
+    assigneeId: targetAssigneeId,
+    actorUserId: session.user.id,
+  }).catch((err) => console.warn("[Push notification dispatch error]:", err));
 
   return NextResponse.json({ data: task }, { status: 201 });
 }
