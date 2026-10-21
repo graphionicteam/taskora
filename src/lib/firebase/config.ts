@@ -54,7 +54,9 @@ export const initFirebaseApp = (): FirebaseApp | null => {
  * Register Service Worker and request Push Notification permission
  * Returns FCM device token or null
  */
-export const requestPushPermissionAndGetToken = async (): Promise<{
+export const requestPushPermissionAndGetToken = async (
+  showWelcome = true
+): Promise<{
   token: string | null;
   error?: string;
   status: "granted" | "denied" | "default" | "unsupported";
@@ -104,22 +106,24 @@ export const requestPushPermissionAndGetToken = async (): Promise<{
     };
   }
 
-  // 3. Immediately display a native phone notification to verify lock screen & banner capability!
-  try {
-    await registration.showNotification(
-      "🔔 Taskora Notifications Active",
-      {
-        body: "You will now receive instant phone alerts for tasks and team chats!",
-        icon: "/icon-192.png",
-        badge: "/badge-72.png",
-        tag: "taskora-welcome-alert",
-        vibrate: [300, 150, 300],
-        renotify: true,
-        data: { url: "/dashboard" },
-      } as unknown as NotificationOptions
-    );
-  } catch (notifErr) {
-    console.warn("Direct notification display notice:", notifErr);
+  // 3. Display a native phone notification to verify lock screen & banner capability (when requested)
+  if (showWelcome) {
+    try {
+      await registration.showNotification(
+        "🔔 Taskora Notifications Active",
+        {
+          body: "You will now receive instant phone alerts for tasks and team chats!",
+          icon: "/icon-192.png",
+          badge: "/badge-72.png",
+          tag: "taskora-welcome-alert",
+          vibrate: [300, 150, 300],
+          renotify: true,
+          data: { url: "/dashboard" },
+        } as unknown as NotificationOptions
+      );
+    } catch (notifErr) {
+      console.warn("Direct notification display notice:", notifErr);
+    }
   }
 
   // 4. Connect to Firebase Cloud Messaging (FCM)
