@@ -55,3 +55,7 @@ Desktop.ini
 *.sublime-workspace
 *.swp
 *.swo
+
+# External sub-projects
+clientforge_web/
+clientforge_app/
