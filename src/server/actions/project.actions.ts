@@ -210,6 +210,7 @@ export async function createProject(data: {
 export async function updateProjectBudget(
   projectId: string,
   data: {
+    description?: string;
     name?: string;
     clientName?: string;
     totalBudget?: number;
@@ -227,6 +228,7 @@ export async function updateProjectBudget(
     where: { id: projectId },
     data: {
       ...(data.name && { name: data.name }),
+      ...(data.description !== undefined && { description: data.description }),
       ...(data.clientName !== undefined && { clientName: data.clientName }),
       ...(data.totalBudget !== undefined && { totalBudget: Number(data.totalBudget) }),
       ...(data.currency && { currency: data.currency }),
@@ -296,4 +298,69 @@ export async function toggleSplitStatus(splitId: string, status: "PENDING" | "AP
 
   revalidatePath("/projects");
   return { success: true, split };
+}
+
+export const updateProject = updateProjectBudget;
+
+export async function deleteProject(projectId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  // Delete splits first just to ensure safety
+  await db.projectBudgetSplit.deleteMany({
+    where: { projectId },
+  });
+
+  await db.project.delete({
+    where: { id: projectId },
+  });
+
+  revalidatePath("/projects");
+  return { success: true };
+}
+
+export async function deleteMultipleProjects(projectIds: string[]) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  if (!projectIds || projectIds.length === 0) {
+    return { success: true, count: 0 };
+  }
+
+  await db.projectBudgetSplit.deleteMany({
+    where: { projectId: { in: projectIds } },
+  });
+
+  const result = await db.project.deleteMany({
+    where: { id: { in: projectIds } },
+  });
+
+  revalidatePath("/projects");
+  return { success: true, count: result.count };
+}
+
+export async function bulkUpdateProjects(
+  projectIds: string[],
+  data: {
+    status?: string;
+    taxPercent?: number;
+  }
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  if (!projectIds || projectIds.length === 0) {
+    return { success: true, count: 0 };
+  }
+
+  const result = await db.project.updateMany({
+    where: { id: { in: projectIds } },
+    data: {
+      ...(data.status && { status: data.status }),
+      ...(data.taxPercent !== undefined && { taxPercent: Number(data.taxPercent) }),
+    },
+  });
+
+  revalidatePath("/projects");
+  return { success: true, count: result.count };
 }
