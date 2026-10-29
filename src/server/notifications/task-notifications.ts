@@ -59,18 +59,18 @@ export async function notifyTaskCreated({
       if (assignee) {
         targetAssigneeName = assignee.user?.name || assignee.user?.email || "team member";
 
-        // Notify assignee if not the actor
-        if (assignee.userId !== actorUserId) {
-          await createNotification({
-            workspaceId,
-            recipientId: assignee.id,
-            actorId: actorMemberId,
-            type: "TASK_ASSIGNED",
-            title: `📋 New Task Assigned: ${taskTitle}`,
-            content: `${actorName} assigned you: "${taskTitle}". Tap to view task.`,
-            link: `/tasks?selected=${taskId}`,
-          });
-        }
+        const isSelfAssigned = assignee.userId === actorUserId;
+        await createNotification({
+          workspaceId,
+          recipientId: assignee.id,
+          actorId: actorMemberId,
+          type: "TASK_ASSIGNED",
+          title: `📋 New Task Assigned: ${taskTitle}`,
+          content: isSelfAssigned
+            ? `You assigned yourself: "${taskTitle}". Tap to view task.`
+            : `${actorName} assigned you: "${taskTitle}". Tap to view task.`,
+          link: `/tasks?selected=${taskId}`,
+        });
       }
     }
 
@@ -153,7 +153,8 @@ export async function notifyTaskUpdated({
           select: { id: true, userId: true, user: { select: { name: true } } },
         });
 
-        if (newAssignee && newAssignee.userId !== actorUserId && !notifiedMemberIds.has(newAssignee.id)) {
+        const isSelfAssigned = newAssignee?.userId === actorUserId;
+        if (newAssignee && !notifiedMemberIds.has(newAssignee.id)) {
           notifiedMemberIds.add(newAssignee.id);
           await createNotification({
             workspaceId,
@@ -161,7 +162,9 @@ export async function notifyTaskUpdated({
             actorId: actorMemberId,
             type: "TASK_ASSIGNED",
             title: `📋 Task Assigned to You: ${updatedTask.title}`,
-            content: `${actorName} assigned you to "${updatedTask.title}".`,
+            content: isSelfAssigned
+              ? `You assigned yourself to "${updatedTask.title}".`
+              : `${actorName} assigned you to "${updatedTask.title}".`,
             link: `/tasks?selected=${taskId}`,
           });
         }

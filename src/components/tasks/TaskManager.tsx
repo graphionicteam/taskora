@@ -169,6 +169,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
       }
 
       await refreshTasks();
+      if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("taskora:refresh-notifications"));
     } catch {
       alert("Network error while updating status.");
     }

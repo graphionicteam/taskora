@@ -73,6 +73,7 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
           setAssigneeId("");
           onClose();
           onTaskCreated?.();
+          if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("taskora:refresh-notifications"));
           router.refresh();
         }
       } catch {

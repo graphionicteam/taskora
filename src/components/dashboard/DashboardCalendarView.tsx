@@ -487,6 +487,7 @@ export function DashboardCalendarView({
       if (selectedTask?.id === taskId) {
         setSelectedTask((prev) => (prev ? { ...prev, ...updates } : null));
       }
+      if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("taskora:refresh-notifications"));
       return { success: true };
     } catch {
       return { error: "Network error" };

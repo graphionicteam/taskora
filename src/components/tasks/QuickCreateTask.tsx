@@ -75,6 +75,7 @@ export const QuickCreateTask: React.FC<QuickCreateTaskProps> = ({
           setTitle("");
           setDueDate("");
           setShowOptions(false);
+          if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("taskora:refresh-notifications"));
           onTaskCreated();
         }
       } catch {

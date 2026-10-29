@@ -32,6 +32,7 @@ interface HeaderProps {
     email?: string | null;
     image?: string | null;
   } | null;
+  currentMemberId?: string | null;
   activeWorkspace?: {
     id: string;
     name: string;
@@ -62,6 +63,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   user,
   activeWorkspace,
+  currentMemberId: propMemberId,
   workspaces = [],
   members = [],
 }) => {
@@ -72,8 +74,10 @@ export const Header: React.FC<HeaderProps> = ({
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
 
-  const currentMember = members.find((m) => m.user.email === user?.email);
-  const currentMemberId = currentMember?.id;
+  const matchedMember = members.find(
+    (m) => m.user.email?.toLowerCase() === user?.email?.toLowerCase()
+  );
+  const currentMemberId = propMemberId || matchedMember?.id;
 
   // Fetch notifications
   useEffect(() => {
@@ -83,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
     const fetchNotifications = async () => {
       try {
         const res = await fetch(
-          `/api/v1/notifications?workspaceId=${activeWorkspace.id}&memberId=${currentMemberId}`
+          `/api/v1/notifications?workspaceId=${activeWorkspace.id}&memberId=${currentMemberId}`, { cache: "no-store" }
         );
         if (res.ok) {
           const data = await res.json();
@@ -97,11 +101,19 @@ export const Header: React.FC<HeaderProps> = ({
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000); // 10s auto-refresh
+    const interval = setInterval(fetchNotifications, 5000); // 5s auto-refresh
+
+    const onRefresh = () => {
+      fetchNotifications();
+    };
+    window.addEventListener("taskora:refresh-notifications", onRefresh);
+    document.addEventListener("visibilitychange", onRefresh);
 
     return () => {
       isMounted = false;
       clearInterval(interval);
+      window.removeEventListener("taskora:refresh-notifications", onRefresh);
+      document.removeEventListener("visibilitychange", onRefresh);
     };
   }, [activeWorkspace?.id, currentMemberId]);
 
@@ -187,7 +199,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="h-16 shrink-0 border-b border-slate-200/80 dark:border-slate-800 bg-surface/95 backdrop-blur-xs sticky top-0 z-20 px-3 sm:px-4 md:px-6 flex items-center justify-between w-full max-w-full overflow-hidden">
+      <header className="h-16 shrink-0 border-b border-slate-200/80 dark:border-slate-800 bg-surface/95 backdrop-blur-xs sticky top-0 z-40 px-3 sm:px-4 md:px-6 flex items-center justify-between w-full max-w-full">
         {/* Brand & Workspace Switcher & Global Search */}
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0 max-w-lg">
           <div className="md:hidden shrink-0">
@@ -238,7 +250,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 ? (
-                <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#4F46E5] text-white text-[10px] font-bold flex items-center justify-center animate-pulse shadow-xs">
+                <span className="absolute -top-1 -right-1 min-w-[19px] h-[19px] px-1 rounded-full bg-red-600 text-white text-[10px] font-extrabold flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-md animate-pulse z-10">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               ) : (

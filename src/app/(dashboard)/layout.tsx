@@ -50,6 +50,7 @@ export default async function DashboardLayout({
               : null
           }
           workspaces={userWorkspaces}
+          currentMemberId={wsContext?.member?.id}
           members={workspaceMembers}
         />
 
